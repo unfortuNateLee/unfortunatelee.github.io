@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorting Algorithm Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #eee;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #888;
+            margin-bottom: 30px;
+        }
+
+        .global-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: white;
+        }
+
+        .btn-start:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #ff4757, #cc3344);
+            color: white;
+        }
+
+        .btn-stop:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 71, 87, 0.4);
+        }
+
+        .btn-reset {
+            background: linear-gradient(135deg, #7b2cbf, #5a1a8a);
+            color: white;
+        }
+
+        .btn-reset:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(123, 44, 191, 0.4);
+        }
+
+        .size-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .size-control label {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .size-control input {
+            width: 60px;
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .size-control input:focus {
+            outline: none;
+            border-color: #00d4ff;
+        }
+
+        .algorithms-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .algorithm-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .algorithm-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .algorithm-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .algorithm-status {
+            font-size: 0.85rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #888;
+        }
+
+        .algorithm-status.running {
+            background: rgba(0, 212, 255, 0.2);
+            color: #00d4ff;
+        }
+
+        .algorithm-status.sorted {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+
+        .canvas-container {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            height: 200px;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .algorithm-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 15px;
+        }
+
+        .algorithm-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-top: 10px;
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin: 20px auto;
+            max-width: 1600px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .legend-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .legend-items {
+            display: flex;
+            gap: 25px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .legend-color.default {
+            background: linear-gradient(135deg, hsl(200, 70%, 50%), hsl(260, 70%, 50%));
+        }
+
+        .legend-color.comparing {
+            background: #ff4757;
+        }
+
+        .legend-color.sorted {
+            background: #00ff88;
+        }
+
+        .sound-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sound-control label {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .sound-control input {
+            width: 60px;
+            padding: 6px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.3);
+            color: #fff;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .stat-value {
+            color: #00d4ff;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .algorithms-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🔮 Sorting Algorithm Visualizer</h1>
+    <p class="subtitle">Watch how different sorting algorithms organize data in real-time</p>
+
+    <div class="global-controls">
+        <button class="btn btn-start" onclick="startAll()">▶ Start All</button>
+        <button class="btn btn-stop" onclick="stopAll()">⏹ Stop All</button>
+        <button class="btn btn-reset" onclick="resetAll()">🔄 Reset All</button>
+        <button class="btn btn-reset" onclick="regenerateData()">🎲 New Data</button>
+        <div class="size-control">
+            <label for="arraySize">Values:</label>
+            <input type="number" id="arraySize" value="50" min="10" max="200" step="10">
+            <button class="btn btn-reset btn-small" onclick="updateArraySize()">Apply</button>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="legend-title">📊 Bar Color Legend</div>
+        <div class="legend-items">
+            <div class="legend-item">
+                <div class="legend-color default"></div>
+                <span>Default (value-based hue)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color comparing"></div>
+                <span>Comparing (elements being compared)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color sorted"></div>
+                <span>Sorted (in final position)</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="global-controls">
+        <div class="sound-control">
+            <label for="soundDuration">🔊 Sound Duration (sec):</label>
+            <input type="number" id="soundDuration" value="0.5" min="0.1" max="2.0" step="0.1">
+        </div>
+    </div>
+
+    <div class="algorithms-grid" id="algorithmsGrid"></div>
+
+    <script>
+        let ARRAY_SIZE = 50;
+        const DELAY = 20;
+
+        // Web Audio API context for sound generation
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let currentOscillator = null;
+        let soundEnabled = true;
+        let hoveredVisualizer = null;
+
+        // Map value to frequency (1 = lowest tone, max = highest tone)
+        function valueToFrequency(value, maxValue) {
+            const minFreq = 200;  // Lowest tone (Hz)
+            const maxFreq = 800;  // Highest tone (Hz)
+            return minFreq + ((value - 1) / (maxValue - 1)) * (maxFreq - minFreq);
+        }
+
+        // Play a tone for a value
+        function playTone(value, maxValue, duration) {
+            if (!soundEnabled || !audioContext) return;
+            
+            // Stop any currently playing tone
+            if (currentOscillator) {
+                try {
+                    currentOscillator.stop();
+                } catch (e) {}
+                currentOscillator = null;
+            }
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.value = valueToFrequency(value, maxValue);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+            
+            currentOscillator = oscillator;
+        }
+
+        // Play the completion melody (all tones in rapid succession)
+        async function playCompletionMelody(array, maxValue, noteDuration) {
+            if (!soundEnabled || !audioContext) return;
+            
+            for (let i = 0; i < array.length; i++) {
+                playTone(array[i], maxValue, noteDuration);
+                await new Promise(resolve => setTimeout(resolve, noteDuration * 1000));
+            }
+        }
+
+        // Get sound duration from input
+        function getSoundDuration() {
+            const input = document.getElementById('soundDuration');
+            return parseFloat(input?.value) || 0.5;
+        }
+
+        // Generate shuffled array of integers 1-50 for fair comparison
+        function generateSharedData() {
+            const data = Array.from({ length: ARRAY_SIZE }, (_, i) => i + 1);
+            // Fisher-Yates shuffle
+            for (let i = data.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [data[i], data[j]] = [data[j], data[i]];
+            }
+            return data;
+        }
+
+        let sharedData = generateSharedData();
+        let sharedMaxValue = Math.max(...sharedData);
+
+        const algorithms = [
+            { name: 'Bubble Sort', key: 'bubble', complexity: 'O(n²)' },
+            { name: 'Selection Sort', key: 'selection', complexity: 'O(n²)' },
+            { name: 'Insertion Sort', key: 'insertion', complexity: 'O(n²)' },
+            { name: 'Merge Sort', key: 'merge', complexity: 'O(n log n)' },
+            { name: 'Quick Sort', key: 'quick', complexity: 'O(n log n)' },
+            { name: 'Heap Sort', key: 'heap', complexity: 'O(n log n)' }
+        ];
+
+        class SortingVisualizer {
+            constructor(algorithm, container) {
+                this.algorithm = algorithm;
+                this.container = container;
+                this.array = [];
+                this.running = false;
+                this.sorted = false;
+                this.comparisons = 0;
+                this.swaps = 0;
+                this.abortController = null;
+                this.maxValue = sharedMaxValue;
+                this.startTime = null;
+                this.endTime = null;
+                this.elapsedTime = 0;
+                this.isHovered = false;
+                
+                this.init();
+            }
+
+            init() {
+                this.createUI();
+                this.generateArray();
+                this.draw();
+            }
+
+            generateArray() {
+                // Copy from shared data so all algorithms start with identical values
+                this.array = [...sharedData];
+                this.comparisons = 0;
+                this.swaps = 0;
+                this.sorted = false;
+                this.startTime = null;
+                this.endTime = null;
+                this.elapsedTime = 0;
+                this.updateStats();
+            }
+
+            createUI() {
+                this.container.innerHTML = `
+                    <div class="algorithm-card">
+                        <div class="algorithm-header">
+                            <span class="algorithm-title">${this.algorithm.name}</span>
+                            <span class="algorithm-status" id="status-${this.algorithm.key}">Ready</span>
+                        </div>
+                        <div class="canvas-container">
+                            <canvas id="canvas-${this.algorithm.key}"></canvas>
+                        </div>
+                        <div class="algorithm-info">
+                            <span>Complexity: <strong>${this.algorithm.complexity}</strong></span>
+                            <span>Array Size: <strong>${ARRAY_SIZE}</strong></span>
+                        </div>
+                        <div class="algorithm-controls">
+                            <button class="btn btn-start btn-small" onclick="visualizers['${this.algorithm.key}'].start()">▶ Start</button>
+                            <button class="btn btn-stop btn-small" onclick="visualizers['${this.algorithm.key}'].stop()">⏹ Stop</button>
+                            <button class="btn btn-reset btn-small" onclick="visualizers['${this.algorithm.key}'].reset()">🔄 Reset</button>
+                        </div>
+                        <div class="stats">
+                            <div class="stat">Comparisons: <span class="stat-value" id="comp-${this.algorithm.key}">0</span></div>
+                            <div class="stat">Swaps: <span class="stat-value" id="swap-${this.algorithm.key}">0</span></div>
+                            <div class="stat">Total Ops: <span class="stat-value" id="total-${this.algorithm.key}">0</span></div>
+                            <div class="stat">Time: <span class="stat-value" id="time-${this.algorithm.key}">0.00s</span></div>
+                        </div>
+                    </div>
+                `;
+
+                this.canvas = document.getElementById(`canvas-${this.algorithm.key}`);
+                this.ctx = this.canvas.getContext('2d');
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+                
+                // Add mouse tracking for sound control
+                const card = this.container.querySelector('.algorithm-card');
+                card.addEventListener('mouseenter', () => {
+                    this.isHovered = true;
+                    hoveredVisualizer = this;
+                });
+                card.addEventListener('mouseleave', () => {
+                    this.isHovered = false;
+                    if (hoveredVisualizer === this) {
+                        hoveredVisualizer = null;
+                    }
+                });
+            }
+
+            resizeCanvas() {
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+                this.draw();
+            }
+
+            draw(highlightIndices = [], sortedIndices = []) {
+                const ctx = this.ctx;
+                const width = this.canvas.width;
+                const height = this.canvas.height;
+                const barWidth = width / this.array.length;
+
+                ctx.fillStyle = '#0a0a0a';
+                ctx.fillRect(0, 0, width, height);
+
+                for (let i = 0; i < this.array.length; i++) {
+                    const barHeight = (this.array[i] / this.maxValue) * (height - 20);
+                    const x = i * barWidth;
+                    const y = height - barHeight;
+
+                    if (sortedIndices.includes(i)) {
+                        ctx.fillStyle = '#00ff88';
+                    } else if (highlightIndices.includes(i)) {
+                        ctx.fillStyle = '#ff4757';
+                    } else {
+                        const hue = 200 + (this.array[i] / this.maxValue) * 60;
+                        ctx.fillStyle = `hsl(${hue}, 70%, 50%)`;
+                    }
+
+                    ctx.fillRect(x + 1, y, barWidth - 2, barHeight);
+                }
+            }
+
+            async sleep() {
+                if (!this.running) throw new Error('Stopped');
+                await new Promise(resolve => setTimeout(resolve, DELAY));
+            }
+
+            updateStats() {
+                document.getElementById(`comp-${this.algorithm.key}`).textContent = this.comparisons;
+                document.getElementById(`swap-${this.algorithm.key}`).textContent = this.swaps;
+                document.getElementById(`total-${this.algorithm.key}`).textContent = this.comparisons + this.swaps;
+                const timeText = this.elapsedTime > 0 ? `${this.elapsedTime.toFixed(2)}s` : '0.00s';
+                document.getElementById(`time-${this.algorithm.key}`).textContent = timeText;
+            }
+
+            setStatus(status) {
+                const el = document.getElementById(`status-${this.algorithm.key}`);
+                el.textContent = status;
+                el.className = 'algorithm-status' + (status === 'Running' ? ' running' : status === 'Sorted' ? ' sorted' : '');
+            }
+
+            playSwapSound(value) {
+                // Only play sound if this is the hovered visualizer (when multiple are running)
+                // or if no specific hover requirement (when running individually)
+                if (!soundEnabled) return;
+                
+                // If multiple algorithms are running, only play for the hovered one
+                if (hoveredVisualizer && hoveredVisualizer !== this) return;
+                
+                const duration = getSoundDuration();
+                playTone(value, this.maxValue, duration);
+            }
+
+            async start() {
+                if (this.running) return;
+                this.running = true;
+                this.startTime = performance.now();
+                this.setStatus('Running');
+
+                try {
+                    switch (this.algorithm.key) {
+                        case 'bubble':
+                            await this.bubbleSort();
+                            break;
+                        case 'selection':
+                            await this.selectionSort();
+                            break;
+                        case 'insertion':
+                            await this.insertionSort();
+                            break;
+                        case 'merge':
+                            await this.mergeSort();
+                            break;
+                        case 'quick':
+                            await this.quickSort();
+                            break;
+                        case 'heap':
+                            await this.heapSort();
+                            break;
+                    }
+                    if (this.running) {
+                        this.sorted = true;
+                        this.endTime = performance.now();
+                        this.elapsedTime = (this.endTime - this.startTime) / 1000;
+                        this.updateStats();
+                        this.setStatus('Sorted');
+                        this.draw([], Array.from({length: this.array.length}, (_, i) => i));
+                        // Play completion melody
+                        const noteDuration = getSoundDuration();
+                        await playCompletionMelody(this.array, this.maxValue, noteDuration);
+                    }
+                } catch (e) {
+                    if (e.message !== 'Stopped') console.error(e);
+                }
+
+                this.running = false;
+            }
+
+            stop() {
+                this.running = false;
+                this.setStatus('Stopped');
+            }
+
+            reset() {
+                this.stop();
+                this.generateArray();
+                this.setStatus('Ready');
+                this.draw();
+            }
+
+            // Bubble Sort
+            async bubbleSort() {
+                const n = this.array.length;
+                for (let i = 0; i < n - 1; i++) {
+                    for (let j = 0; j < n - i - 1; j++) {
+                        this.comparisons++;
+                        this.draw([j, j + 1]);
+                        this.updateStats();
+                        await this.sleep();
+
+                        if (this.array[j] > this.array[j + 1]) {
+                            [this.array[j], this.array[j + 1]] = [this.array[j + 1], this.array[j]];
+                            this.swaps++;
+                            this.updateStats();
+                            this.playSwapSound(this.array[j]);
+                        }
+                    }
+                }
+            }
+
+            // Selection Sort
+            async selectionSort() {
+                const n = this.array.length;
+                for (let i = 0; i < n - 1; i++) {
+                    let minIdx = i;
+                    for (let j = i + 1; j < n; j++) {
+                        this.comparisons++;
+                        this.draw([minIdx, j]);
+                        this.updateStats();
+                        await this.sleep();
+
+                        if (this.array[j] < this.array[minIdx]) {
+                            minIdx = j;
+                        }
+                    }
+                    if (minIdx !== i) {
+                        [this.array[i], this.array[minIdx]] = [this.array[minIdx], this.array[i]];
+                        this.swaps++;
+                        this.updateStats();
+                        this.playSwapSound(this.array[i]);
+                    }
+                }
+            }
+
+            // Insertion Sort
+            async insertionSort() {
+                const n = this.array.length;
+                for (let i = 1; i < n; i++) {
+                    let key = this.array[i];
+                    let j = i - 1;
+
+                    while (j >= 0) {
+                        this.comparisons++;
+                        this.draw([j, j + 1]);
+                        this.updateStats();
+                        await this.sleep();
+
+                        if (this.array[j] > key) {
+                            this.array[j + 1] = this.array[j];
+                            this.swaps++;
+                            this.updateStats();
+                            this.playSwapSound(this.array[j + 1]);
+                            j--;
+                        } else {
+                            break;
+                        }
+                    }
+                    this.array[j + 1] = key;
+                }
+            }
+
+            // Merge Sort
+            async mergeSort(start = 0, end = this.array.length - 1) {
+                if (start >= end) return;
+
+                const mid = Math.floor((start + end) / 2);
+                await this.mergeSort(start, mid);
+                await this.mergeSort(mid + 1, end);
+                await this.merge(start, mid, end);
+            }
+
+            async merge(start, mid, end) {
+                const left = this.array.slice(start, mid + 1);
+                const right = this.array.slice(mid + 1, end + 1);
+                let i = 0, j = 0, k = start;
+
+                while (i < left.length && j < right.length) {
+                    this.comparisons++;
+                    this.draw([k]);
+                    this.updateStats();
+                    await this.sleep();
+
+                    if (left[i] <= right[j]) {
+                        this.array[k] = left[i];
+                        this.playSwapSound(this.array[k]);
+                        i++;
+                    } else {
+                        this.array[k] = right[j];
+                        this.playSwapSound(this.array[k]);
+                        j++;
+                    }
+                    this.swaps++;
+                    this.updateStats();
+                    k++;
+                }
+
+                while (i < left.length) {
+                    this.array[k] = left[i];
+                    this.playSwapSound(this.array[k]);
+                    this.draw([k]);
+                    this.swaps++;
+                    this.updateStats();
+                    await this.sleep();
+                    i++;
+                    k++;
+                }
+
+                while (j < right.length) {
+                    this.array[k] = right[j];
+                    this.playSwapSound(this.array[k]);
+                    this.draw([k]);
+                    this.swaps++;
+                    this.updateStats();
+                    await this.sleep();
+                    j++;
+                    k++;
+                }
+            }
+
+            // Quick Sort
+            async quickSort(low = 0, high = this.array.length - 1) {
+                if (low < high) {
+                    const pi = await this.partition(low, high);
+                    await this.quickSort(low, pi - 1);
+                    await this.quickSort(pi + 1, high);
+                }
+            }
+
+            async partition(low, high) {
+                const pivot = this.array[high];
+                let i = low - 1;
+
+                for (let j = low; j < high; j++) {
+                    this.comparisons++;
+                    this.draw([j, high]);
+                    this.updateStats();
+                    await this.sleep();
+
+                    if (this.array[j] < pivot) {
+                        i++;
+                        [this.array[i], this.array[j]] = [this.array[j], this.array[i]];
+                        this.swaps++;
+                        this.updateStats();
+                        this.playSwapSound(this.array[i]);
+                    }
+                }
+
+                [this.array[i + 1], this.array[high]] = [this.array[high], this.array[i + 1]];
+                this.swaps++;
+                this.updateStats();
+                this.playSwapSound(this.array[i + 1]);
+                return i + 1;
+            }
+
+            // Heap Sort
+            async heapSort() {
+                const n = this.array.length;
+
+                for (let i = Math.floor(n / 2) - 1; i >= 0; i--) {
+                    await this.heapify(n, i);
+                }
+
+                for (let i = n - 1; i > 0; i--) {
+                    [this.array[0], this.array[i]] = [this.array[i], this.array[0]];
+                    this.swaps++;
+                    this.updateStats();
+                    this.playSwapSound(this.array[0]);
+                    this.draw([0, i]);
+                    await this.sleep();
+                    await this.heapify(i, 0);
+                }
+            }
+
+            async heapify(n, i) {
+                let largest = i;
+                const left = 2 * i + 1;
+                const right = 2 * i + 2;
+
+                if (left < n) {
+                    this.comparisons++;
+                    if (this.array[left] > this.array[largest]) {
+                        largest = left;
+                    }
+                }
+
+                if (right < n) {
+                    this.comparisons++;
+                    if (this.array[right] > this.array[largest]) {
+                        largest = right;
+                    }
+                }
+
+                this.draw([i, left, right].filter(x => x < n));
+                this.updateStats();
+                await this.sleep();
+
+                if (largest !== i) {
+                    [this.array[i], this.array[largest]] = [this.array[largest], this.array[i]];
+                    this.swaps++;
+                    this.updateStats();
+                    this.playSwapSound(this.array[i]);
+                    await this.heapify(n, largest);
+                }
+            }
+        }
+
+        // Initialize visualizers
+        const visualizers = {};
+        const grid = document.getElementById('algorithmsGrid');
+
+        algorithms.forEach(alg => {
+            const container = document.createElement('div');
+            grid.appendChild(container);
+            visualizers[alg.key] = new SortingVisualizer(alg, container);
+        });
+
+        // Global controls
+        function startAll() {
+            Object.values(visualizers).forEach(v => v.start());
+        }
+
+        function stopAll() {
+            Object.values(visualizers).forEach(v => v.stop());
+        }
+
+        function resetAll() {
+            Object.values(visualizers).forEach(v => v.reset());
+        }
+
+        function regenerateData() {
+            // Stop all running algorithms
+            stopAll();
+            // Generate new shared random data
+            sharedData = generateSharedData();
+            // Update max value
+            sharedMaxValue = Math.max(...sharedData);
+            // Update max value for all visualizers
+            Object.values(visualizers).forEach(v => v.maxValue = sharedMaxValue);
+            // Reset all visualizers with the new data
+            Object.values(visualizers).forEach(v => v.reset());
+        }
+
+        function updateArraySize() {
+            const input = document.getElementById('arraySize');
+            const newSize = parseInt(input.value);
+            
+            if (isNaN(newSize) || newSize < 10 || newSize > 200) {
+                alert('Please enter a value between 10 and 200');
+                return;
+            }
+            
+            // Stop all running algorithms
+            stopAll();
+            
+            // Update array size
+            ARRAY_SIZE = newSize;
+            
+            // Clear existing visualizers
+            Object.keys(visualizers).forEach(key => delete visualizers[key]);
+            grid.innerHTML = '';
+            
+            // Generate new shared data with new size
+            sharedData = generateSharedData();
+            sharedMaxValue = Math.max(...sharedData);
+            
+            // Recreate all visualizers with new size
+            algorithms.forEach(alg => {
+                const container = document.createElement('div');
+                grid.appendChild(container);
+                visualizers[alg.key] = new SortingVisualizer(alg, container);
+            });
+        }
+    </script>
+</body>
+</html>

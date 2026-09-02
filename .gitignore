@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+.AppleDouble
+._*
+
+# Editors
+.vscode/
+.idea/
+
+# Node (if a tool ever grows a build step)
+node_modules/
+
+# Jekyll local build output
+_site/
+.jekyll-cache/
+
+# Local secrets, never commit
+.env
+*.local

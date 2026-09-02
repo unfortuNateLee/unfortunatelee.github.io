@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>STL → USDZ</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+–bg: #0a0a0f;
+–surface: #12121a;
+–surface2: #1a1a26;
+–border: #2a2a40;
+–accent: #7c6af7;
+–accent2: #a78bfa;
+–accent3: #c4b5fd;
+–green: #4ade80;
+–red: #f87171;
+–amber: #fbbf24;
+–text: #e2e0f0;
+–muted: #6b6882;
+–glow: rgba(124, 106, 247, 0.15);
+}
+
+html, body {
+height: 100%;
+background: var(–bg);
+color: var(–text);
+font-family: ‘Syne’, sans-serif;
+overflow-x: hidden;
+}
+
+body {
+min-height: 100dvh;
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+}
+
+/* ── Animated background ── */
+.bg-grid {
+position: fixed;
+inset: 0;
+background-image:
+linear-gradient(var(–border) 1px, transparent 1px),
+linear-gradient(90deg, var(–border) 1px, transparent 1px);
+background-size: 48px 48px;
+opacity: 0.3;
+pointer-events: none;
+z-index: 0;
+}
+
+.bg-glow {
+position: fixed;
+top: -20%;
+left: 50%;
+transform: translateX(-50%);
+width: 600px;
+height: 600px;
+background: radial-gradient(ellipse, rgba(124,106,247,0.18) 0%, transparent 70%);
+pointer-events: none;
+z-index: 0;
+animation: pulse 6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+0%, 100% { opacity: 0.6; transform: translateX(-50%) scale(1); }
+50% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+}
+
+/* ── Layout ── */
+.container {
+position: relative;
+z-index: 1;
+width: 100%;
+max-width: 640px;
+padding: 32px 20px 48px;
+display: flex;
+flex-direction: column;
+gap: 24px;
+min-height: 100dvh;
+}
+
+/* ── Header ── */
+header {
+display: flex;
+flex-direction: column;
+gap: 6px;
+padding-top: 12px;
+}
+
+.logo-row {
+display: flex;
+align-items: center;
+gap: 12px;
+}
+
+.logo-icon {
+width: 40px;
+height: 40px;
+border-radius: 10px;
+background: linear-gradient(135deg, var(–accent) 0%, #5b21b6 100%);
+display: flex;
+align-items: center;
+justify-content: center;
+flex-shrink: 0;
+box-shadow: 0 0 20px rgba(124,106,247,0.4);
+}
+
+.logo-icon svg { width: 22px; height: 22px; }
+
+h1 {
+font-size: clamp(22px, 6vw, 28px);
+font-weight: 800;
+letter-spacing: -0.5px;
+background: linear-gradient(135deg, var(–accent3) 0%, #fff 60%);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+}
+
+.subtitle {
+font-family: ‘DM Mono’, monospace;
+font-size: 12px;
+color: var(–muted);
+letter-spacing: 0.5px;
+}
+
+/* ── Drop Zone ── */
+#drop-zone {
+border: 1.5px dashed var(–border);
+border-radius: 16px;
+padding: 36px 24px;
+text-align: center;
+cursor: pointer;
+transition: all 0.2s ease;
+background: var(–surface);
+position: relative;
+overflow: hidden;
+}
+
+#drop-zone::before {
+content: ‘’;
+position: absolute;
+inset: 0;
+background: linear-gradient(135deg, var(–glow) 0%, transparent 100%);
+opacity: 0;
+transition: opacity 0.2s;
+pointer-events: none;
+}
+
+#drop-zone:hover::before,
+#drop-zone.drag-over::before { opacity: 1; }
+
+#drop-zone:hover,
+#drop-zone.drag-over {
+border-color: var(–accent);
+background: var(–surface2);
+transform: translateY(-1px);
+box-shadow: 0 8px 32px rgba(124,106,247,0.15);
+}
+
+#drop-zone.drag-over {
+border-style: solid;
+border-color: var(–accent2);
+}
+
+.drop-icon {
+width: 52px;
+height: 52px;
+margin: 0 auto 16px;
+background: var(–surface2);
+border-radius: 12px;
+display: flex;
+align-items: center;
+justify-content: center;
+border: 1px solid var(–border);
+transition: all 0.2s;
+}
+
+#drop-zone:hover .drop-icon,
+#drop-zone.drag-over .drop-icon {
+background: rgba(124,106,247,0.15);
+border-color: var(–accent);
+}
+
+.drop-icon svg { width: 26px; height: 26px; color: var(–accent2); }
+
+.drop-title {
+font-size: 16px;
+font-weight: 600;
+color: var(–text);
+margin-bottom: 6px;
+}
+
+.drop-hint {
+font-family: ‘DM Mono’, monospace;
+font-size: 12px;
+color: var(–muted);
+}
+
+.drop-hint strong {
+color: var(–accent3);
+font-weight: 500;
+}
+
+#file-input { display: none; }
+
+/* ── Queue ── */
+#queue {
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+
+.queue-header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+margin-bottom: 2px;
+}
+
+.queue-label {
+font-family: ‘DM Mono’, monospace;
+font-size: 11px;
+color: var(–muted);
+text-transform: uppercase;
+letter-spacing: 1px;
+}
+
+.clear-btn {
+font-family: ‘DM Mono’, monospace;
+font-size: 11px;
+color: var(–muted);
+background: none;
+border: none;
+cursor: pointer;
+padding: 4px 8px;
+border-radius: 6px;
+transition: all 0.15s;
+letter-spacing: 0.5px;
+}
+
+.clear-btn:hover { color: var(–red); background: rgba(248,113,113,0.1); }
+
+/* ── File Card ── */
+.file-card {
+background: var(–surface);
+border: 1px solid var(–border);
+border-radius: 12px;
+padding: 14px 16px;
+display: flex;
+align-items: center;
+gap: 12px;
+animation: slideIn 0.2s ease;
+transition: border-color 0.2s;
+}
+
+@keyframes slideIn {
+from { opacity: 0; transform: translateY(6px); }
+to { opacity: 1; transform: translateY(0); }
+}
+
+.file-card.success { border-color: rgba(74, 222, 128, 0.3); }
+.file-card.error { border-color: rgba(248, 113, 113, 0.25); }
+.file-card.processing { border-color: rgba(124, 106, 247, 0.4); }
+
+.file-icon {
+width: 38px;
+height: 38px;
+border-radius: 8px;
+background: var(–surface2);
+border: 1px solid var(–border);
+display: flex;
+align-items: center;
+justify-content: center;
+flex-shrink: 0;
+font-family: ‘DM Mono’, monospace;
+font-size: 9px;
+font-weight: 500;
+color: var(–muted);
+letter-spacing: 0.3px;
+}
+
+.file-info {
+flex: 1;
+min-width: 0;
+}
+
+.file-name {
+font-size: 13px;
+font-weight: 600;
+color: var(–text);
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+margin-bottom: 3px;
+}
+
+.file-meta {
+font-family: ‘DM Mono’, monospace;
+font-size: 11px;
+color: var(–muted);
+}
+
+.file-status {
+flex-shrink: 0;
+display: flex;
+align-items: center;
+gap: 8px;
+}
+
+.status-dot {
+width: 8px;
+height: 8px;
+border-radius: 50%;
+background: var(–muted);
+}
+
+.status-dot.pending { background: var(–muted); }
+.status-dot.processing { background: var(–accent); animation: blink 0.8s ease infinite; }
+.status-dot.success { background: var(–green); }
+.status-dot.error { background: var(–red); }
+
+@keyframes blink {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.3; }
+}
+
+.download-btn {
+font-family: ‘DM Mono’, monospace;
+font-size: 11px;
+font-weight: 500;
+color: var(–bg);
+background: var(–green);
+border: none;
+border-radius: 7px;
+padding: 6px 12px;
+cursor: pointer;
+text-decoration: none;
+display: inline-flex;
+align-items: center;
+gap: 5px;
+transition: all 0.15s;
+white-space: nowrap;
+}
+
+.download-btn:hover {
+background: #86efac;
+transform: translateY(-1px);
+box-shadow: 0 4px 12px rgba(74,222,128,0.3);
+}
+
+.error-msg {
+font-family: ‘DM Mono’, monospace;
+font-size: 11px;
+color: var(–red);
+max-width: 140px;
+text-align: right;
+}
+
+/* ── Convert All Button ── */
+#convert-all-btn {
+background: linear-gradient(135deg, var(–accent) 0%, #5b21b6 100%);
+color: white;
+border: none;
+border-radius: 12px;
+padding: 16px 28px;
+font-family: ‘Syne’, sans-serif;
+font-size: 15px;
+font-weight: 700;
+cursor: pointer;
+letter-spacing: 0.3px;
+transition: all 0.2s ease;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 10px;
+box-shadow: 0 4px 24px rgba(124,106,247,0.35);
+position: relative;
+overflow: hidden;
+}
+
+#convert-all-btn::before {
+content: ‘’;
+position: absolute;
+inset: 0;
+background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+opacity: 0;
+transition: opacity 0.2s;
+}
+
+#convert-all-btn:hover::before { opacity: 1; }
+
+#convert-all-btn:hover {
+transform: translateY(-2px);
+box-shadow: 0 8px 32px rgba(124,106,247,0.5);
+}
+
+#convert-all-btn:active { transform: translateY(0); }
+#convert-all-btn:disabled {
+opacity: 0.4;
+cursor: not-allowed;
+transform: none;
+box-shadow: none;
+}
+
+#convert-all-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* ── Options Panel ── */
+.options-panel {
+background: var(–surface);
+border: 1px solid var(–border);
+border-radius: 12px;
+padding: 16px;
+display: flex;
+flex-direction: column;
+gap: 14px;
+}
+
+.options-title {
+font-family: ‘DM Mono’, monospace;
+font-size: 11px;
+color: var(–muted);
+text-transform: uppercase;
+letter-spacing: 1px;
+}
+
+.option-row {
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 12px;
+}
+
+.option-label {
+font-size: 13px;
+font-weight: 600;
+color: var(–text);
+}
+
+.option-desc {
+font-family: ‘DM Mono’, monospace;
+font-size: 11px;
+color: var(–muted);
+margin-top: 2px;
+}
+
+/* Toggle */
+.toggle {
+position: relative;
+width: 44px;
+height: 24px;
+flex-shrink: 0;
+}
+
+.toggle input { opacity: 0; width: 0; height: 0; }
+
+.toggle-track {
+position: absolute;
+inset: 0;
+background: var(–surface2);
+border: 1px solid var(–border);
+border-radius: 12px;
+cursor: pointer;
+transition: all 0.2s;
+}
+
+.toggle-track::after {
+content: ‘’;
+position: absolute;
+width: 18px;
+height: 18px;
+background: var(–muted);
+border-radius: 50%;
+top: 2px;
+left: 2px;
+transition: all 0.2s;
+}
+
+.toggle input:checked + .toggle-track {
+background: rgba(124,106,247,0.2);
+border-color: var(–accent);
+}
+
+.toggle input:checked + .toggle-track::after {
+background: var(–accent2);
+transform: translateX(20px);
+}
+
+/* Select */
+.styled-select {
+background: var(–surface2);
+border: 1px solid var(–border);
+border-radius: 8px;
+color: var(–text);
+font-family: ‘DM Mono’, monospace;
+font-size: 12px;
+padding: 6px 10px;
+cursor: pointer;
+outline: none;
+transition: border-color 0.15s;
+appearance: none;
+-webkit-appearance: none;
+background-image: url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘12’ viewBox=‘0 0 24 24’ fill=‘none’ stroke=’%236b6882’ stroke-width=‘2’%3E%3Cpath d=‘m6 9 6 6 6-6’/%3E%3C/svg%3E”);
+background-repeat: no-repeat;
+background-position: right 8px center;
+padding-right: 28px;
+}
+
+.styled-select:focus { border-color: var(–accent); }
+
+/* ── Info Bar ── */
+.info-bar {
+background: rgba(124,106,247,0.08);
+border: 1px solid rgba(124,106,247,0.2);
+border-radius: 10px;
+padding: 12px 14px;
+font-family: ‘DM Mono’, monospace;
+font-size: 11px;
+color: var(–accent3);
+line-height: 1.6;
+}
+
+.info-bar strong { color: var(–text); }
+
+/* ── Footer ── */
+footer {
+margin-top: auto;
+padding-top: 12px;
+text-align: center;
+font-family: ‘DM Mono’, monospace;
+font-size: 11px;
+color: var(–muted);
+line-height: 1.6;
+}
+
+/* ── Spinner ── */
+.spinner {
+width: 16px;
+height: 16px;
+border: 2px solid rgba(255,255,255,0.2);
+border-top-color: white;
+border-radius: 50%;
+animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+to { transform: rotate(360deg); }
+}
+
+/* ── Responsive tweaks ── */
+@media (max-width: 380px) {
+.container { padding: 20px 14px 36px; }
+h1 { font-size: 20px; }
+#drop-zone { padding: 28px 16px; }
+}
+</style>
+
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+
+<div class="container">
+
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+      </div>
+      <h1>STL → USDZ</h1>
+    </div>
+    <p class="subtitle">// client-side · no upload · works offline</p>
+  </header>
+
+  <!-- Drop Zone -->
+
+  <div id="drop-zone" role="button" tabindex="0" aria-label="Drop STL files here or click to browse">
+    <input type="file" id="file-input" accept=".stl" multiple>
+    <div class="drop-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+    </div>
+    <p class="drop-title">Drop STL files here</p>
+    <p class="drop-hint">or tap to browse · <strong>.stl</strong> binary &amp; ASCII</p>
+  </div>
+
+  <!-- Options -->
+
+  <div class="options-panel">
+    <div class="options-title">// options</div>
+    <div class="option-row">
+      <div>
+        <div class="option-label">Material preset</div>
+        <div class="option-desc">Base color applied to mesh</div>
+      </div>
+      <select class="styled-select" id="material-preset">
+        <option value="silver">Silver metal</option>
+        <option value="white">Matte white</option>
+        <option value="grey">Mid grey</option>
+        <option value="resin">Dark resin</option>
+        <option value="gold">Gold metal</option>
+        <option value="none">Unlit white</option>
+      </select>
+    </div>
+    <div class="option-row">
+      <div>
+        <div class="option-label">Double-sided</div>
+        <div class="option-desc">Render back faces (thicker files)</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="double-sided">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="option-row">
+      <div>
+        <div class="option-label">Recenter mesh</div>
+        <div class="option-desc">Move origin to bounding-box center</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="recenter" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- File Queue -->
+
+  <div id="queue-wrapper" style="display:none;">
+    <div class="queue-header">
+      <span class="queue-label">// queue</span>
+      <button class="clear-btn" id="clear-btn">clear all</button>
+    </div>
+    <div id="queue"></div>
+  </div>
+
+  <!-- Convert Button -->
+
+  <button id="convert-all-btn" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="13 2 13 9 20 9"/><path d="M3 15V3h10l4 4v4"/><path d="m7 15 2-6 2 3.5 2-1.5 2 4"/>
+      <rect x="3" y="15" width="18" height="6" rx="2"/>
+    </svg>
+    Convert to USDZ
+  </button>
+
+  <!-- Info -->
+
+  <div class="info-bar">
+    <strong>All processing is local.</strong> Your files never leave this device.<br>
+    Output: <strong>USDZ</strong> (uncompressed ZIP containing USDA) — opens in AR Quick Look on iOS/macOS, Blender, and Reality Composer.
+  </div>
+
+  <footer>
+    STL → USDZ Converter · runs entirely in your browser<br>
+    no server, no tracking, no data sent anywhere
+  </footer>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────
+const files = []; // { file, id, name, size, status, blob, error }
+let idCounter = 0;
+
+// ─────────────────────────────────────────────
+//  MATERIAL PRESETS
+// ─────────────────────────────────────────────
+const MATERIALS = {
+  silver: { r:0.82, g:0.82, b:0.84, metallic:0.9, roughness:0.25 },
+  white:  { r:0.95, g:0.95, b:0.95, metallic:0.0, roughness:0.7  },
+  grey:   { r:0.50, g:0.50, b:0.52, metallic:0.0, roughness:0.55 },
+  resin:  { r:0.12, g:0.10, b:0.14, metallic:0.0, roughness:0.35 },
+  gold:   { r:1.00, g:0.78, b:0.20, metallic:0.95,roughness:0.20 },
+  none:   { r:1.00, g:1.00, b:1.00, metallic:0.0, roughness:1.0, unlit:true },
+};
+
+// ─────────────────────────────────────────────
+//  DOM REFS
+// ─────────────────────────────────────────────
+const dropZone     = document.getElementById('drop-zone');
+const fileInput    = document.getElementById('file-input');
+const queue        = document.getElementById('queue');
+const queueWrapper = document.getElementById('queue-wrapper');
+const convertBtn   = document.getElementById('convert-all-btn');
+const clearBtn     = document.getElementById('clear-btn');
+const materialSel  = document.getElementById('material-preset');
+const doubleSided  = document.getElementById('double-sided');
+const recenterCb   = document.getElementById('recenter');
+
+// ─────────────────────────────────────────────
+//  DROP ZONE EVENTS
+// ─────────────────────────────────────────────
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); });
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const dropped = [...(e.dataTransfer.files || [])].filter(f => f.name.toLowerCase().endsWith('.stl'));
+  if (dropped.length) addFiles(dropped);
+});
+
+fileInput.addEventListener('change', () => {
+  const chosen = [...(fileInput.files || [])].filter(f => f.name.toLowerCase().endsWith('.stl'));
+  if (chosen.length) addFiles(chosen);
+  fileInput.value = '';
+});
+
+clearBtn.addEventListener('click', () => {
+  files.length = 0;
+  queue.innerHTML = '';
+  queueWrapper.style.display = 'none';
+  convertBtn.disabled = true;
+});
+
+// ─────────────────────────────────────────────
+//  FILE MANAGEMENT
+// ─────────────────────────────────────────────
+function addFiles(newFiles) {
+  newFiles.forEach(f => {
+    const id = ++idCounter;
+    files.push({ file: f, id, name: f.name, size: f.size, status: 'pending', blob: null, error: null });
+    renderCard(id);
+  });
+  queueWrapper.style.display = 'block';
+  convertBtn.disabled = false;
+}
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function renderCard(id) {
+  const entry = files.find(f => f.id === id);
+  if (!entry) return;
+
+  let existing = document.getElementById('card-' + id);
+  if (!existing) {
+    existing = document.createElement('div');
+    existing.id = 'card-' + id;
+    existing.className = 'file-card';
+    queue.appendChild(existing);
+  }
+
+  const baseName = entry.name.replace(/\.stl$/i, '');
+  const ext = entry.name.toLowerCase().endsWith('.stl') ? 'STL' : entry.name.split('.').pop().toUpperCase();
+
+  let statusHTML = '';
+  if (entry.status === 'pending') {
+    statusHTML = `<span class="status-dot pending" title="Pending"></span>`;
+  } else if (entry.status === 'processing') {
+    statusHTML = `<span class="status-dot processing" title="Converting…"></span>`;
+  } else if (entry.status === 'success' && entry.blob) {
+    const url = URL.createObjectURL(entry.blob);
+    statusHTML = `<a class="download-btn" href="${url}" download="${baseName}.usdz">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17l-5-5h3V3h4v9h3l-5 5z"/><rect x="3" y="19" width="18" height="2" rx="1"/></svg>
+      .usdz
+    </a>`;
+  } else if (entry.status === 'error') {
+    statusHTML = `<span class="error-msg">${entry.error || 'Error'}</span>`;
+  }
+
+  existing.className = `file-card ${entry.status === 'success' ? 'success' : entry.status === 'error' ? 'error' : entry.status === 'processing' ? 'processing' : ''}`;
+
+  existing.innerHTML = `
+    <div class="file-icon">${ext}</div>
+    <div class="file-info">
+      <div class="file-name" title="${entry.name}">${entry.name}</div>
+      <div class="file-meta">${fmtSize(entry.size)}</div>
+    </div>
+    <div class="file-status">${statusHTML}</div>
+  `;
+}
+
+// ─────────────────────────────────────────────
+//  CONVERT BUTTON
+// ─────────────────────────────────────────────
+convertBtn.addEventListener('click', async () => {
+  const pending = files.filter(f => f.status === 'pending');
+  if (!pending.length) return;
+
+  convertBtn.disabled = true;
+  convertBtn.innerHTML = `<div class="spinner"></div> Converting…`;
+
+  for (const entry of pending) {
+    entry.status = 'processing';
+    renderCard(entry.id);
+
+    try {
+      const buf = await entry.file.arrayBuffer();
+      const mat = MATERIALS[materialSel.value] || MATERIALS.silver;
+      const opts = {
+        doubleSided: doubleSided.checked,
+        recenter: recenterCb.checked,
+      };
+      const usdzBlob = stlToUsdz(buf, entry.name, mat, opts);
+      entry.blob = usdzBlob;
+      entry.status = 'success';
+    } catch (err) {
+      entry.status = 'error';
+      entry.error = (err.message || 'Parse error').substring(0, 30);
+      console.error(err);
+    }
+
+    renderCard(entry.id);
+  }
+
+  convertBtn.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="13 2 13 9 20 9"/><path d="M3 15V3h10l4 4v4"/><path d="m7 15 2-6 2 3.5 2-1.5 2 4"/>
+      <rect x="3" y="15" width="18" height="6" rx="2"/>
+    </svg>
+    Convert to USDZ`;
+
+  const stillPending = files.some(f => f.status === 'pending');
+  convertBtn.disabled = !stillPending;
+});
+
+// ─────────────────────────────────────────────
+//  STL PARSER
+// ─────────────────────────────────────────────
+function parseBinaryStl(buf) {
+  const view = new DataView(buf);
+  // Binary STL: 80-byte header, 4-byte triangle count, then 50 bytes/tri
+  const triCount = view.getUint32(80, true);
+  if (buf.byteLength < 84 + triCount * 50) throw new Error('Truncated binary STL');
+
+  const points = [];
+  const normals = [];
+  const faceIndices = [];
+
+  for (let i = 0; i < triCount; i++) {
+    const base = 84 + i * 50;
+    const nx = view.getFloat32(base + 0, true);
+    const ny = view.getFloat32(base + 4, true);
+    const nz = view.getFloat32(base + 8, true);
+
+    const idx0 = points.length / 3;
+    for (let v = 0; v < 3; v++) {
+      points.push(
+        view.getFloat32(base + 12 + v * 12 + 0, true),
+        view.getFloat32(base + 12 + v * 12 + 4, true),
+        view.getFloat32(base + 12 + v * 12 + 8, true)
+      );
+      normals.push(nx, ny, nz);
+    }
+    faceIndices.push(idx0, idx0 + 1, idx0 + 2);
+  }
+
+  return { points, normals, faceIndices };
+}
+
+function isAsciiStl(buf) {
+  // Check first 256 bytes for "solid"
+  const bytes = new Uint8Array(buf, 0, Math.min(256, buf.byteLength));
+  const head = String.fromCharCode(...bytes).trimStart();
+  return head.startsWith('solid');
+}
+
+function parseAsciiStl(buf) {
+  const text = new TextDecoder().decode(buf);
+  const points = [];
+  const normals = [];
+  const faceIndices = [];
+
+  const triRe = /facet\s+normal\s+([\S]+)\s+([\S]+)\s+([\S]+)\s+outer\s+loop([\s\S]*?)endloop/g;
+  const vertRe = /vertex\s+([\S]+)\s+([\S]+)\s+([\S]+)/g;
+
+  let m;
+  while ((m = triRe.exec(text)) !== null) {
+    const nx = parseFloat(m[1]), ny = parseFloat(m[2]), nz = parseFloat(m[3]);
+    const loopText = m[4];
+    let vm;
+    const idx0 = points.length / 3;
+    let count = 0;
+    vertRe.lastIndex = 0;
+    while ((vm = vertRe.exec(loopText)) !== null && count < 3) {
+      points.push(parseFloat(vm[1]), parseFloat(vm[2]), parseFloat(vm[3]));
+      normals.push(nx, ny, nz);
+      count++;
+    }
+    if (count === 3) faceIndices.push(idx0, idx0 + 1, idx0 + 2);
+  }
+
+  if (faceIndices.length === 0) throw new Error('No triangles found in ASCII STL');
+  return { points, normals, faceIndices };
+}
+
+function parseStl(buf) {
+  // Binary STL starts with 80-byte header; some ASCII STLs also have "solid" in binary
+  // Heuristic: if byte count matches binary formula, use binary; else ASCII
+  const view = new DataView(buf);
+  if (buf.byteLength >= 84) {
+    const triCount = view.getUint32(80, true);
+    const expectedSize = 84 + triCount * 50;
+    if (expectedSize === buf.byteLength) {
+      return parseBinaryStl(buf);
+    }
+  }
+  if (isAsciiStl(buf)) return parseAsciiStl(buf);
+  return parseBinaryStl(buf); // fallback
+}
+
+// ─────────────────────────────────────────────
+//  GEOMETRY HELPERS
+// ─────────────────────────────────────────────
+function computeBounds(points) {
+  let minX=Infinity, minY=Infinity, minZ=Infinity;
+  let maxX=-Infinity, maxY=-Infinity, maxZ=-Infinity;
+  for (let i = 0; i < points.length; i += 3) {
+    if (points[i]   < minX) minX = points[i];
+    if (points[i]   > maxX) maxX = points[i];
+    if (points[i+1] < minY) minY = points[i+1];
+    if (points[i+1] > minY) ;
+    if (points[i+1] > maxY) maxY = points[i+1];
+    if (points[i+2] < minZ) minZ = points[i+2];
+    if (points[i+2] > maxZ) maxZ = points[i+2];
+  }
+  return { minX, minY, minZ, maxX, maxY, maxZ };
+}
+
+function centerPoints(points) {
+  const b = computeBounds(points);
+  const cx = (b.minX + b.maxX) / 2;
+  const cy = (b.minY + b.maxY) / 2;
+  const cz = (b.minZ + b.maxZ) / 2;
+  const out = new Array(points.length);
+  for (let i = 0; i < points.length; i += 3) {
+    out[i]   = points[i]   - cx;
+    out[i+1] = points[i+1] - cy;
+    out[i+2] = points[i+2] - cz;
+  }
+  return out;
+}
+
+// ─────────────────────────────────────────────
+//  USDA WRITER
+// ─────────────────────────────────────────────
+function buildUsda(geom, mat, meshName, opts) {
+  let pts = geom.points;
+  if (opts.recenter) pts = centerPoints(pts);
+
+  // Build point array string
+  function fmtVec3Array(arr) {
+    const lines = [];
+    for (let i = 0; i < arr.length; i += 3) {
+      lines.push(`(${arr[i].toFixed(6)}, ${arr[i+1].toFixed(6)}, ${arr[i+2].toFixed(6)})`);
+    }
+    return lines.join(', ');
+  }
+
+  function fmtIntArray(arr) {
+    return arr.join(', ');
+  }
+
+  const vertexCount = pts.length / 3;
+  const faceCount = geom.faceIndices.length / 3;
+
+  // faceVertexCounts: all 3s
+  const faceVertexCounts = new Array(faceCount).fill(3).join(', ');
+
+  // Material USD path
+  const matPath = '/Root/Materials/Mat';
+
+  let materialBlock = '';
+  if (mat.unlit) {
+    materialBlock = `
+    def Material "Mat"
+    {
+        token outputs:surface.connect = </Root/Materials/Mat/PBRShader.outputs:surface>
+
+        def Shader "PBRShader"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (${mat.r.toFixed(4)}, ${mat.g.toFixed(4)}, ${mat.b.toFixed(4)})
+            float inputs:roughness = 1.0
+            float inputs:metallic = 0.0
+            float inputs:opacity = 1.0
+            token outputs:surface
+        }
+    }`;
+  } else {
+    materialBlock = `
+    def Material "Mat"
+    {
+        token outputs:surface.connect = </Root/Materials/Mat/PBRShader.outputs:surface>
+
+        def Shader "PBRShader"
+        {
+            uniform token info:id = "UsdPreviewSurface"
+            color3f inputs:diffuseColor = (${mat.r.toFixed(4)}, ${mat.g.toFixed(4)}, ${mat.b.toFixed(4)})
+            float inputs:roughness = ${mat.roughness.toFixed(4)}
+            float inputs:metallic = ${mat.metallic.toFixed(4)}
+            float inputs:opacity = 1.0
+            token outputs:surface
+        }
+    }`;
+  }
+
+  const doubleSidedLine = opts.doubleSided ? '\n        bool doubleSided = 1' : '';
+
+  const usda = `#usda 1.0
+(
+    defaultPrim = "Root"
+    metersPerUnit = 0.01
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    def Mesh "${meshName}"
+    {
+        int[] faceVertexCounts = [${faceVertexCounts}]
+        int[] faceVertexIndices = [${fmtIntArray(geom.faceIndices)}]
+        point3f[] points = [${fmtVec3Array(pts)}]
+        normal3f[] normals = [${fmtVec3Array(geom.normals)}] (
+            interpolation = "faceVarying"
+        )${doubleSidedLine}
+        uniform token subdivisionScheme = "none"
+        rel material:binding = <${matPath}>
+    }
+
+    def Scope "Materials"
+    {${materialBlock}
+    }
+}
+`;
+
+  return usda;
+}
+
+// ─────────────────────────────────────────────
+//  ZIP / USDZ WRITER
+//  USDZ = uncompressed ZIP (store method), 8-byte aligned entries
+// ─────────────────────────────────────────────
+function buildUsdz(usdaText, innerFilename) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(usdaText);
+  const filename = encoder.encode(innerFilename);
+
+  // Each local file header must be 8-byte aligned (USD spec)
+  // Local file header size: 30 + filename.length
+  const LOCAL_HDR_SIZE = 30 + filename.length;
+  const dataOffset = LOCAL_HDR_SIZE;
+  // Pad data offset to multiple of 8
+  const alignedOffset = Math.ceil(dataOffset / 8) * 8;
+  const extraPadding = alignedOffset - dataOffset; // bytes of extra field to add
+  const actualLocalHdrSize = LOCAL_HDR_SIZE + extraPadding;
+
+  const now = new Date();
+  const dosTime = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xFFFF;
+  const dosDate = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xFFFF;
+
+  const crc = crc32(data);
+
+  // Total ZIP size:
+  // local file header (with optional extra) + data
+  // + central directory record
+  // + end-of-central-directory record
+  const CDR_SIZE = 46 + filename.length;
+  const EOCD_SIZE = 22;
+
+  const totalSize = actualLocalHdrSize + data.length + CDR_SIZE + EOCD_SIZE;
+  const buf = new ArrayBuffer(totalSize);
+  const view = new DataView(buf);
+  const bytes = new Uint8Array(buf);
+  let pos = 0;
+
+  function writeU16(v) { view.setUint16(pos, v, true); pos += 2; }
+  function writeU32(v) { view.setUint32(pos, v, true); pos += 4; }
+  function writeBytes(arr) { bytes.set(arr, pos); pos += arr.length; }
+  function writePad(n) { pos += n; } // zero-initialized already
+
+  // ── Local File Header ──
+  writeU32(0x04034b50);  // signature
+  writeU16(20);          // version needed (2.0)
+  writeU16(0);           // general purpose bit flag
+  writeU16(0);           // compression: STORED
+  writeU16(dosTime);
+  writeU16(dosDate);
+  writeU32(crc);
+  writeU32(data.length); // compressed size
+  writeU32(data.length); // uncompressed size
+  writeU16(filename.length);
+  writeU16(extraPadding); // extra field length (for alignment)
+  writeBytes(filename);
+  writePad(extraPadding); // extra bytes (zero-padded)
+
+  // ── File Data ──
+  writeBytes(data);
+
+  // ── Central Directory Record ──
+  const cdrOffset = actualLocalHdrSize; // offset of the local file header from start
+  // (cdrOffset = 0, i.e. it starts at byte 0 of the file)
+  const cdrStart = pos;
+  writeU32(0x02014b50);  // signature
+  writeU16(20);          // version made by
+  writeU16(20);          // version needed
+  writeU16(0);           // general purpose bit flag
+  writeU16(0);           // compression
+  writeU16(dosTime);
+  writeU16(dosDate);
+  writeU32(crc);
+  writeU32(data.length);
+  writeU32(data.length);
+  writeU16(filename.length);
+  writeU16(0);           // extra field length
+  writeU16(0);           // file comment length
+  writeU16(0);           // disk number start
+  writeU16(0);           // internal attributes
+  writeU32(0);           // external attributes
+  writeU32(0);           // relative offset of local header = 0 (starts at beginning)
+  writeBytes(filename);
+
+  // ── End of Central Directory ──
+  const cdrSize = pos - cdrStart;
+  writeU32(0x06054b50);  // signature
+  writeU16(0);           // disk number
+  writeU16(0);           // disk with start of CD
+  writeU16(1);           // num entries this disk
+  writeU16(1);           // total entries
+  writeU32(cdrSize);     // size of central directory
+  writeU32(cdrStart);    // offset of central directory
+  writeU16(0);           // comment length
+
+  return new Blob([buf], { type: 'model/vnd.usdz+zip' });
+}
+
+// ─────────────────────────────────────────────
+//  CRC-32
+// ─────────────────────────────────────────────
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let j = 0; j < 8; j++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[i] = c;
+  }
+  return t;
+})();
+
+function crc32(data) {
+  let crc = 0xFFFFFFFF;
+  for (let i = 0; i < data.length; i++) {
+    crc = CRC_TABLE[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+// ─────────────────────────────────────────────
+//  MAIN CONVERSION
+// ─────────────────────────────────────────────
+function stlToUsdz(buf, filename, mat, opts) {
+  const geom = parseStl(buf);
+  if (!geom.faceIndices.length) throw new Error('No geometry found');
+
+  // Sanitize mesh name for USD (must start with letter/underscore, no spaces)
+  const rawName = filename.replace(/\.stl$/i, '');
+  const meshName = rawName.replace(/[^A-Za-z0-9_]/g, '_').replace(/^([0-9])/, '_$1') || 'Mesh';
+
+  const innerFilename = meshName + '.usda';
+  const usdaText = buildUsda(geom, mat, meshName, opts);
+  return buildUsdz(usdaText, innerFilename);
+}
+</script>
+
+</body>
+</html>

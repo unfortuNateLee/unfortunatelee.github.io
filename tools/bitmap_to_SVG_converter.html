@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SVG Tracer</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0c0c0e;
+    --surface: #141416;
+    --border: #252528;
+    --border-hover: #3a3a40;
+    --gold: #d4a843;
+    --gold-dim: #8a6c28;
+    --text: #e2ddd4;
+    --muted: #6b6760;
+    --dim: #2a2a2e;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 20px 60px;
+  }
+
+  /* ── Header ── */
+  header {
+    text-align: center;
+    margin-bottom: 44px;
+    animation: fadeDown 0.6s ease both;
+  }
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 6px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 6vw, 56px);
+    font-weight: 900;
+    letter-spacing: -2px;
+    line-height: 1;
+    color: var(--text);
+  }
+  h1 span { color: var(--gold); }
+  .rule {
+    width: 36px; height: 2px;
+    background: var(--gold);
+    margin: 16px auto 0;
+  }
+
+  /* ── Drop zone ── */
+  #dropzone {
+    width: 100%; max-width: 660px;
+    border: 2px dashed var(--border);
+    border-radius: 6px;
+    padding: 44px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 28px;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+  #dropzone:hover, #dropzone.drag { border-color: var(--gold); background: rgba(212,168,67,0.04); }
+  #dropzone .icon { font-size: 32px; margin-bottom: 12px; opacity: 0.6; }
+  #dropzone .label { font-size: 13px; color: var(--muted); }
+  #dropzone .filename { font-size: 12px; color: var(--gold); margin-top: 6px; }
+  #fileInput { display: none; }
+
+  /* ── Controls ── */
+  #controls {
+    display: none;
+    width: 100%; max-width: 660px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 20px 28px;
+    gap: 32px;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    margin-bottom: 28px;
+    animation: fadeUp 0.3s ease both;
+  }
+  #controls.visible { display: flex; }
+
+  .ctrl-group label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill {
+    padding: 5px 12px;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pill:hover { border-color: var(--border-hover); color: var(--text); }
+  .pill.active { background: var(--gold); color: #0c0c0e; border-color: var(--gold); font-weight: 700; }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 150px; height: 4px;
+    background: var(--dim);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--gold);
+    cursor: pointer;
+  }
+  .scale-val { font-size: 12px; color: var(--gold); margin-left: 10px; }
+
+  /* ── Output panel ── */
+  #output {
+    display: none;
+    width: 100%; max-width: 660px;
+    animation: fadeUp 0.3s ease both;
+  }
+  #output.visible { display: block; }
+
+  .tabs { display: flex; margin-bottom: -1px; }
+  .tab {
+    padding: 9px 22px;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: 'Space Mono', monospace;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-right: 3px;
+  }
+  .tab.active {
+    background: var(--surface);
+    color: var(--text);
+    border-bottom-color: var(--surface);
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0 6px 6px 6px;
+    padding: 24px;
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #previewPanel { display: flex; }
+  #codePanel { display: none; }
+
+  #svgPreview { max-width: 100%; max-height: 500px; border-radius: 3px; background: #fff; }
+
+  #codeBox {
+    width: 100%;
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    color: #9a9080;
+    background: transparent;
+    border: none;
+    resize: vertical;
+    outline: none;
+    min-height: 300px;
+    line-height: 1.7;
+  }
+
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--dim);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .spinner-label { font-size: 12px; color: var(--muted); margin-top: 14px; letter-spacing: 2px; }
+
+  /* ── Action bar ── */
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .btn {
+    padding: 9px 22px;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-family: 'Space Mono', monospace;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--border-hover); color: var(--text); }
+  .btn-primary { background: var(--gold); color: #0c0c0e; border: none; font-weight: 700; }
+  .btn-primary:hover { background: #e0b855; }
+
+  /* ── Footer ── */
+  footer {
+    margin-top: 48px;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: none; } }
+  @keyframes fadeUp   { from { opacity: 0; transform: translateY(12px);  } to { opacity: 1; transform: none; } }
+  @keyframes spin     { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Bitmap → Vector</div>
+  <h1>SVG <span>Tracer</span></h1>
+  <div class="rule"></div>
+</header>
+
+<div id="dropzone">
+  <div class="icon">⬆</div>
+  <div class="label">Drop a PNG, JPG, GIF, or WebP — or click to browse</div>
+  <div class="filename" id="filename"></div>
+</div>
+<input type="file" id="fileInput" accept="image/*">
+
+<div id="controls">
+  <div class="ctrl-group">
+    <label>Colors</label>
+    <div class="pill-group" id="colorPills">
+      <button class="pill" data-val="2">2</button>
+      <button class="pill" data-val="4">4</button>
+      <button class="pill active" data-val="8">8</button>
+      <button class="pill" data-val="16">16</button>
+      <button class="pill" data-val="32">32</button>
+    </div>
+  </div>
+  <div class="ctrl-group">
+    <label>Scale: <span id="scaleVal" class="scale-val">1×</span></label>
+    <input type="range" id="scaleSlider" min="0.25" max="2" step="0.25" value="1">
+  </div>
+</div>
+
+<div id="output">
+  <div class="tabs">
+    <button class="tab active" id="tabPreview">Preview</button>
+    <button class="tab" id="tabCode">SVG Code</button>
+  </div>
+  <div class="panel">
+    <div id="previewPanel">
+      <div class="spinner" id="spinner"></div>
+    </div>
+    <div id="codePanel">
+      <textarea id="codeBox" readonly></textarea>
+    </div>
+  </div>
+  <div class="actions" id="actions" style="display:none">
+    <button class="btn btn-ghost" id="btnCopy">Copy SVG</button>
+    <button class="btn btn-primary" id="btnDownload">Download .svg</button>
+  </div>
+</div>
+
+<canvas id="canvas" style="display:none"></canvas>
+
+<footer>All processing runs locally · No uploads</footer>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  let currentImage = null;
+  let currentSVG = '';
+  let currentFilename = 'image';
+  let colorCount = 8;
+  let scale = 1;
+
+  // ── DOM refs ───────────────────────────────────────────────────────────────
+  const dropzone   = document.getElementById('dropzone');
+  const fileInput  = document.getElementById('fileInput');
+  const controls   = document.getElementById('controls');
+  const output     = document.getElementById('output');
+  const previewPanel = document.getElementById('previewPanel');
+  const codePanel  = document.getElementById('codePanel');
+  const spinner    = document.getElementById('spinner');
+  const actions    = document.getElementById('actions');
+  const codeBox    = document.getElementById('codeBox');
+  const scaleSlider = document.getElementById('scaleSlider');
+  const scaleVal   = document.getElementById('scaleVal');
+  const canvas     = document.getElementById('canvas');
+  const ctx        = canvas.getContext('2d');
+
+  // ── Drop zone events ───────────────────────────────────────────────────────
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault(); dropzone.classList.remove('drag');
+    loadFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => loadFile(fileInput.files[0]));
+
+  // ── Color pills ────────────────────────────────────────────────────────────
+  document.getElementById('colorPills').addEventListener('click', e => {
+    const btn = e.target.closest('.pill');
+    if (!btn) return;
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    colorCount = +btn.dataset.val;
+    if (currentImage) process();
+  });
+
+  // ── Scale slider ───────────────────────────────────────────────────────────
+  scaleSlider.addEventListener('input', () => {
+    scale = +scaleSlider.value;
+    scaleVal.textContent = scale + '×';
+    if (currentImage) process();
+  });
+
+  // ── Tabs ───────────────────────────────────────────────────────────────────
+  document.getElementById('tabPreview').addEventListener('click', () => switchTab('preview'));
+  document.getElementById('tabCode').addEventListener('click',    () => switchTab('code'));
+
+  function switchTab(t) {
+    document.getElementById('tabPreview').classList.toggle('active', t === 'preview');
+    document.getElementById('tabCode').classList.toggle('active', t === 'code');
+    previewPanel.style.display = t === 'preview' ? 'flex' : 'none';
+    codePanel.style.display    = t === 'code'    ? 'block' : 'none';
+  }
+
+  // ── Copy / Download ────────────────────────────────────────────────────────
+  document.getElementById('btnCopy').addEventListener('click', () => {
+    navigator.clipboard && navigator.clipboard.writeText(currentSVG);
+  });
+  document.getElementById('btnDownload').addEventListener('click', () => {
+    const blob = new Blob([currentSVG], { type: 'image/svg+xml' });
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob),
+      download: currentFilename + '.svg'
+    });
+    a.click();
+  });
+
+  // ── Load file ──────────────────────────────────────────────────────────────
+  function loadFile(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    currentFilename = file.name.replace(/\.[^.]+$/, '');
+    document.getElementById('filename').textContent = file.name;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { currentImage = img; showUI(); process(); };
+    img.src = url;
+  }
+
+  function showUI() {
+    controls.classList.add('visible');
+    output.classList.add('visible');
+    actions.style.display = 'none';
+    spinner.style.display = 'block';
+    previewPanel.innerHTML = '';
+    previewPanel.appendChild(spinner);
+  }
+
+  // ── Core processing ────────────────────────────────────────────────────────
+  function process() {
+    actions.style.display = 'none';
+    spinner.style.display = 'block';
+    if (!previewPanel.contains(spinner)) {
+      previewPanel.innerHTML = '';
+      previewPanel.appendChild(spinner);
+    }
+
+    setTimeout(() => {
+      const w = Math.max(1, Math.round(currentImage.naturalWidth  * scale));
+      const h = Math.max(1, Math.round(currentImage.naturalHeight * scale));
+      canvas.width = w; canvas.height = h;
+      ctx.drawImage(currentImage, 0, 0, w, h);
+      const imageData = ctx.getImageData(0, 0, w, h);
+
+      const centroids  = kMeans(imageData, colorCount);
+      const assigned   = assignPixels(imageData, centroids);
+      const svgPaths   = buildPaths(assigned, centroids, w, h);
+
+      currentSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">\n${svgPaths}\n</svg>`;
+      codeBox.value = currentSVG;
+
+      // Render preview via blob URL (avoids innerHTML injection concerns)
+      const blob = new Blob([currentSVG], { type: 'image/svg+xml' });
+      const url  = URL.createObjectURL(blob);
+      const img  = new Image();
+      img.id = 'svgPreview';
+      img.style.cssText = 'max-width:100%;max-height:500px;border-radius:3px;';
+      img.onload = () => {
+        previewPanel.innerHTML = '';
+        previewPanel.appendChild(img);
+        actions.style.display = 'flex';
+      };
+      img.src = url;
+    }, 30);
+  }
+
+  // ── k-Means color quantization ─────────────────────────────────────────────
+  function kMeans(imageData, k) {
+    const { data } = imageData;
+    const pixels = [];
+    for (let i = 0; i < data.length; i += 4)
+      if (data[i + 3] > 128) pixels.push([data[i], data[i+1], data[i+2]]);
+    if (!pixels.length) return [[0,0,0]];
+
+    // Spread initial centroids
+    let centroids = [];
+    for (let i = 0; i < k; i++)
+      centroids.push(pixels[Math.floor((i / k) * pixels.length)].slice());
+
+    for (let iter = 0; iter < 10; iter++) {
+      const sums = Array.from({ length: k }, () => [0,0,0,0]);
+      for (const p of pixels) {
+        let best = 0, bestD = Infinity;
+        for (let c = 0; c < k; c++) {
+          const d = (p[0]-centroids[c][0])**2 + (p[1]-centroids[c][1])**2 + (p[2]-centroids[c][2])**2;
+          if (d < bestD) { bestD = d; best = c; }
+        }
+        sums[best][0] += p[0]; sums[best][1] += p[1];
+        sums[best][2] += p[2]; sums[best][3]++;
+      }
+      centroids = sums.map(s => s[3] ? [s[0]/s[3], s[1]/s[3], s[2]/s[3]] : [0,0,0]);
+    }
+    return centroids.map(([r,g,b]) => [Math.round(r), Math.round(g), Math.round(b)]);
+  }
+
+  // ── Assign pixels to nearest centroid ─────────────────────────────────────
+  function assignPixels(imageData, centroids) {
+    const { data, width, height } = imageData;
+    const result = new Uint8Array(width * height);
+    for (let i = 0; i < width * height; i++) {
+      const r = data[i*4], g = data[i*4+1], b = data[i*4+2], a = data[i*4+3];
+      if (a < 128) { result[i] = 255; continue; }
+      let best = 0, bestD = Infinity;
+      for (let c = 0; c < centroids.length; c++) {
+        const d = (r-centroids[c][0])**2 + (g-centroids[c][1])**2 + (b-centroids[c][2])**2;
+        if (d < bestD) { bestD = d; best = c; }
+      }
+      result[i] = best;
+    }
+    return result;
+  }
+
+  // ── Build SVG paths via run-length rect tracing ────────────────────────────
+  function buildPaths(assigned, centroids, w, h) {
+    const lines = [];
+    for (let ci = 0; ci < centroids.length; ci++) {
+      const parts = [];
+      for (let y = 0; y < h; y++) {
+        let startX = -1;
+        for (let x = 0; x <= w; x++) {
+          const match = x < w && assigned[y * w + x] === ci;
+          if (match && startX === -1) startX = x;
+          else if (!match && startX !== -1) {
+            parts.push(`M${startX},${y}h${x-startX}v1h-${x-startX}z`);
+            startX = -1;
+          }
+        }
+      }
+      if (parts.length) {
+        const [r,g,b] = centroids[ci];
+        const hex = '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+        lines.push(`  <path fill="${hex}" d="${parts.join(' ')}"/>`);
+      }
+    }
+    return lines.join('\n');
+  }
+</script>
+</body>
+</html>

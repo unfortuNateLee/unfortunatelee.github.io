@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SVG → USDZ Converter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap');
+  :root{--bg:#0a0a0f;--surface:#12121a;--border:#1e1e2e;--accent:#7c6af7;--accent2:#f76a8c;--text:#e8e8f0;--muted:#6060a0;--success:#4af7a0}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:40px 20px;background-image:radial-gradient(ellipse at 20% 20%,#1a0a2e 0%,transparent 60%),radial-gradient(ellipse at 80% 80%,#0a1a2e 0%,transparent 60%)}
+  h1{font-size:clamp(1.8rem,4vw,3rem);font-weight:800;letter-spacing:-.03em;background:linear-gradient(135deg,#fff 30%,var(--accent) 70%,var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px;text-align:center}
+  .subtitle{color:var(--muted);font-size:.9rem;font-family:'DM Mono',monospace;margin-bottom:48px;text-align:center}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;width:100%;max-width:640px;position:relative;overflow:hidden}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),var(--accent2),transparent)}
+  .drop-zone{border:2px dashed var(--border);border-radius:12px;padding:48px 24px;text-align:center;cursor:pointer;transition:all .2s ease;position:relative}
+  .drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:rgba(124,106,247,.05)}
+  .drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .drop-icon{font-size:3rem;margin-bottom:12px;display:block}
+  .drop-label{font-size:1.1rem;font-weight:600;margin-bottom:6px}
+  .drop-hint{font-size:.8rem;color:var(--muted);font-family:'DM Mono',monospace}
+  .preview-row{display:none;gap:16px;margin-top:24px;align-items:flex-start}
+  .preview-box{flex:0 0 120px;height:120px;background:#1a1a2a;border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px}
+  .preview-box svg{max-width:100%;max-height:100%}
+  .file-info{flex:1}
+  .file-name{font-weight:600;font-size:.95rem;margin-bottom:6px;word-break:break-all}
+  .file-meta{font-size:.78rem;color:var(--muted);font-family:'DM Mono',monospace;line-height:1.7}
+  .color-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .chip{display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.05);border-radius:20px;padding:3px 8px 3px 5px;font-size:.7rem;font-family:'DM Mono',monospace;border:1px solid rgba(255,255,255,.08)}
+  .chip-dot{width:12px;height:12px;border-radius:50%;border:1px solid rgba(255,255,255,.2);flex-shrink:0}
+  .convert-btn{width:100%;margin-top:24px;padding:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;border-radius:10px;color:#fff;font-family:'Syne',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;transition:opacity .2s,transform .1s;display:none;letter-spacing:.02em}
+  .convert-btn:hover{opacity:.9}.convert-btn:active{transform:scale(.98)}.convert-btn:disabled{opacity:.4;cursor:not-allowed}
+  .log-box{margin-top:20px;background:#0a0a14;border:1px solid var(--border);border-radius:10px;padding:16px;font-family:'DM Mono',monospace;font-size:.75rem;color:#6060a0;line-height:1.8;max-height:200px;overflow-y:auto;display:none}
+  .log-line{display:block}.log-line.ok{color:var(--success)}.log-line.err{color:var(--accent2)}.log-line.info{color:var(--accent)}
+  .download-btn{width:100%;margin-top:16px;padding:14px;background:rgba(74,247,160,.1);border:1px solid var(--success);border-radius:10px;color:var(--success);font-family:'Syne',sans-serif;font-size:1rem;font-weight:600;cursor:pointer;transition:background .2s;display:none;letter-spacing:.02em}
+  .download-btn:hover{background:rgba(74,247,160,.18)}
+  .info-footer{margin-top:32px;font-size:.75rem;color:var(--muted);font-family:'DM Mono',monospace;text-align:center;line-height:1.8}
+  .badge{display:inline-block;background:rgba(124,106,247,.15);border:1px solid rgba(124,106,247,.3);border-radius:4px;padding:1px 6px;font-size:.7rem;color:var(--accent);margin:0 2px}
+</style>
+</head>
+<body>
+<h1>SVG → USDZ</h1>
+<p class="subtitle">convert vector graphics to augmented reality • preserves colors &amp; shapes</p>
+<div class="card">
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept=".svg,image/svg+xml">
+    <span class="drop-icon">⬡</span>
+    <div class="drop-label">Drop your SVG here</div>
+    <div class="drop-hint">or click to browse · .svg files only</div>
+  </div>
+  <div class="preview-row" id="previewRow">
+    <div class="preview-box" id="previewBox"></div>
+    <div class="file-info">
+      <div class="file-name" id="fileName"></div>
+      <div class="file-meta" id="fileMeta"></div>
+      <div class="color-chips" id="colorChips"></div>
+    </div>
+  </div>
+  <button class="convert-btn" id="convertBtn">Convert to USDZ</button>
+  <div class="log-box" id="logBox"></div>
+  <button class="download-btn" id="downloadBtn">⬇ Download .usdz</button>
+</div>
+<div class="info-footer">
+  Generates a <span class="badge">USDZ</span> with one mesh per SVG subpath<br>
+  Bezier subdivision · earcut hole triangulation · Z-layered · 64-byte aligned<br>
+  No external dependencies · works fully offline
+</div>
+
+<script>
+// ─── Inlined earcut.js (mapbox/earcut v2.2.4) ─────────────────────────────────
+// Source: https://github.com/mapbox/earcut  MIT License
+// Handles non-convex polygons and polygon holes natively.
+function earcut(data, holeIndices, dim = 2) {
+
+    const hasHoles = holeIndices && holeIndices.length;
+    const outerLen = hasHoles ? holeIndices[0] * dim : data.length;
+    let outerNode = linkedList(data, 0, outerLen, dim, true);
+    const triangles = [];
+
+    if (!outerNode || outerNode.next === outerNode.prev) return triangles;
+
+    let minX, minY, invSize;
+
+    if (hasHoles) outerNode = eliminateHoles(data, holeIndices, outerNode, dim);
+
+    if (data.length > 80 * dim) {
+        minX = data[0];
+        minY = data[1];
+        let maxX = minX;
+        let maxY = minY;
+
+        for (let i = dim; i < outerLen; i += dim) {
+            const x = data[i];
+            const y = data[i + 1];
+            if (x < minX) minX = x;
+            if (y < minY) minY = y;
+            if (x > maxX) maxX = x;
+            if (y > maxY) maxY = y;
+        }
+
+        invSize = Math.max(maxX - minX, maxY - minY);
+        invSize = invSize !== 0 ? 32767 / invSize : 0;
+    }
+
+    earcutLinked(outerNode, triangles, dim, minX, minY, invSize, 0);
+
+    return triangles;
+}
+
+function linkedList(data, start, end, dim, clockwise) {
+    let last;
+
+    if (clockwise === (signedArea(data, start, end, dim) > 0)) {
+        for (let i = start; i < end; i += dim) last = insertNode(i / dim | 0, data[i], data[i + 1], last);
+    } else {
+        for (let i = end - dim; i >= start; i -= dim) last = insertNode(i / dim | 0, data[i], data[i + 1], last);
+    }
+
+    if (last && equals(last, last.next)) {
+        removeNode(last);
+        last = last.next;
+    }
+
+    return last;
+}
+
+function filterPoints(start, end) {
+    if (!start) return start;
+    if (!end) end = start;
+
+    let p = start, again;
+    do {
+        again = false;
+
+        if (!p.steiner && (equals(p, p.next) || area(p.prev, p, p.next) === 0)) {
+            removeNode(p);
+            p = end = p.prev;
+            if (p === p.next) break;
+            again = true;
+        } else {
+            p = p.next;
+        }
+    } while (again || p !== end);
+
+    return end;
+}
+
+function earcutLinked(ear, triangles, dim, minX, minY, invSize, pass) {
+    if (!ear) return;
+
+    if (!pass && invSize) indexCurve(ear, minX, minY, invSize);
+
+    let stop = ear;
+
+    while (ear.prev !== ear.next) {
+        const prev = ear.prev;
+        const next = ear.next;
+
+        if (invSize ? isEarHashed(ear, minX, minY, invSize) : isEar(ear)) {
+            triangles.push(prev.i, ear.i, next.i);
+            removeNode(ear);
+            ear = next.next;
+            stop = next.next;
+            continue;
+        }
+
+        ear = next;
+
+        if (ear === stop) {
+            if (!pass) {
+                earcutLinked(filterPoints(ear), triangles, dim, minX, minY, invSize, 1);
+            } else if (pass === 1) {
+                ear = cureLocalIntersections(filterPoints(ear), triangles);
+                earcutLinked(ear, triangles, dim, minX, minY, invSize, 2);
+            } else if (pass === 2) {
+                splitEarcut(ear, triangles, dim, minX, minY, invSize);
+            }
+            break;
+        }
+    }
+}
+
+function isEar(ear) {
+    const a = ear.prev, b = ear, c = ear.next;
+    if (area(a, b, c) >= 0) return false;
+
+    const ax = a.x, bx = b.x, cx = c.x, ay = a.y, by = b.y, cy = c.y;
+    const x0 = Math.min(ax, bx, cx), y0 = Math.min(ay, by, cy),
+          x1 = Math.max(ax, bx, cx), y1 = Math.max(ay, by, cy);
+
+    let p = c.next;
+    while (p !== a) {
+        if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1 &&
+            pointInTriangleExceptFirst(ax, ay, bx, by, cx, cy, p.x, p.y) &&
+            area(p.prev, p, p.next) >= 0) return false;
+        p = p.next;
+    }
+    return true;
+}
+
+function isEarHashed(ear, minX, minY, invSize) {
+    const a = ear.prev, b = ear, c = ear.next;
+    if (area(a, b, c) >= 0) return false;
+
+    const ax = a.x, bx = b.x, cx = c.x, ay = a.y, by = b.y, cy = c.y;
+    const x0 = Math.min(ax, bx, cx), y0 = Math.min(ay, by, cy),
+          x1 = Math.max(ax, bx, cx), y1 = Math.max(ay, by, cy);
+    const minZ = zOrder(x0, y0, minX, minY, invSize),
+          maxZ = zOrder(x1, y1, minX, minY, invSize);
+
+    let p = ear.prevZ, n = ear.nextZ;
+
+    while (p && p.z >= minZ && n && n.z <= maxZ) {
+        if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1 && p !== a && p !== c &&
+            pointInTriangleExceptFirst(ax, ay, bx, by, cx, cy, p.x, p.y) && area(p.prev, p, p.next) >= 0) return false;
+        p = p.prevZ;
+
+        if (n.x >= x0 && n.x <= x1 && n.y >= y0 && n.y <= y1 && n !== a && n !== c &&
+            pointInTriangleExceptFirst(ax, ay, bx, by, cx, cy, n.x, n.y) && area(n.prev, n, n.next) >= 0) return false;
+        n = n.nextZ;
+    }
+
+    while (p && p.z >= minZ) {
+        if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1 && p !== a && p !== c &&
+            pointInTriangleExceptFirst(ax, ay, bx, by, cx, cy, p.x, p.y) && area(p.prev, p, p.next) >= 0) return false;
+        p = p.prevZ;
+    }
+
+    while (n && n.z <= maxZ) {
+        if (n.x >= x0 && n.x <= x1 && n.y >= y0 && n.y <= y1 && n !== a && n !== c &&
+            pointInTriangleExceptFirst(ax, ay, bx, by, cx, cy, n.x, n.y) && area(n.prev, n, n.next) >= 0) return false;
+        n = n.nextZ;
+    }
+
+    return true;
+}
+
+function cureLocalIntersections(start, triangles) {
+    let p = start;
+    do {
+        const a = p.prev, b = p.next.next;
+        if (!equals(a, b) && intersects(a, p, p.next, b) && locallyInside(a, b) && locallyInside(b, a)) {
+            triangles.push(a.i, p.i, b.i);
+            removeNode(p);
+            removeNode(p.next);
+            p = start = b;
+        }
+        p = p.next;
+    } while (p !== start);
+    return filterPoints(p);
+}
+
+function splitEarcut(start, triangles, dim, minX, minY, invSize) {
+    let a = start;
+    do {
+        let b = a.next.next;
+        while (b !== a.prev) {
+            if (a.i !== b.i && isValidDiagonal(a, b)) {
+                let c = splitPolygon(a, b);
+                a = filterPoints(a, a.next);
+                c = filterPoints(c, c.next);
+                earcutLinked(a, triangles, dim, minX, minY, invSize, 0);
+                earcutLinked(c, triangles, dim, minX, minY, invSize, 0);
+                return;
+            }
+            b = b.next;
+        }
+        a = a.next;
+    } while (a !== start);
+}
+
+function eliminateHoles(data, holeIndices, outerNode, dim) {
+    const queue = [];
+    for (let i = 0, len = holeIndices.length; i < len; i++) {
+        const start = holeIndices[i] * dim;
+        const end = i < len - 1 ? holeIndices[i + 1] * dim : data.length;
+        const list = linkedList(data, start, end, dim, false);
+        if (list === list.next) list.steiner = true;
+        queue.push(getLeftmost(list));
+    }
+    queue.sort(compareXYSlope);
+    for (let i = 0; i < queue.length; i++) outerNode = eliminateHole(queue[i], outerNode);
+    return outerNode;
+}
+
+function compareXYSlope(a, b) {
+    let result = a.x - b.x;
+    if (result === 0) {
+        result = a.y - b.y;
+        if (result === 0) {
+            const aSlope = (a.next.y - a.y) / (a.next.x - a.x);
+            const bSlope = (b.next.y - b.y) / (b.next.x - b.x);
+            result = aSlope - bSlope;
+        }
+    }
+    return result;
+}
+
+function eliminateHole(hole, outerNode) {
+    const bridge = findHoleBridge(hole, outerNode);
+    if (!bridge) return outerNode;
+    const bridgeReverse = splitPolygon(bridge, hole);
+    filterPoints(bridgeReverse, bridgeReverse.next);
+    return filterPoints(bridge, bridge.next);
+}
+
+function findHoleBridge(hole, outerNode) {
+    let p = outerNode;
+    const hx = hole.x, hy = hole.y;
+    let qx = -Infinity, m;
+    if (equals(hole, p)) return p;
+    do {
+        if (equals(hole, p.next)) return p.next;
+        else if (hy <= p.y && hy >= p.next.y && p.next.y !== p.y) {
+            const x = p.x + (hy - p.y) * (p.next.x - p.x) / (p.next.y - p.y);
+            if (x <= hx && x > qx) {
+                qx = x;
+                m = p.x < p.next.x ? p : p.next;
+                if (x === hx) return m;
+            }
+        }
+        p = p.next;
+    } while (p !== outerNode);
+
+    if (!m) return null;
+
+    const stop = m, mx = m.x, my = m.y;
+    let tanMin = Infinity;
+    p = m;
+    do {
+        if (hx >= p.x && p.x >= mx && hx !== p.x &&
+            pointInTriangle(hy < my ? hx : qx, hy, mx, my, hy < my ? qx : hx, hy, p.x, p.y)) {
+            const tan = Math.abs(hy - p.y) / (hx - p.x);
+            if (locallyInside(p, hole) &&
+                (tan < tanMin || (tan === tanMin && (p.x > m.x || (p.x === m.x && sectorContainsSector(m, p)))))) {
+                m = p;
+                tanMin = tan;
+            }
+        }
+        p = p.next;
+    } while (p !== stop);
+    return m;
+}
+
+function sectorContainsSector(m, p) {
+    return area(m.prev, m, p.prev) < 0 && area(p.next, m, m.next) < 0;
+}
+
+function indexCurve(start, minX, minY, invSize) {
+    let p = start;
+    do {
+        if (p.z === 0) p.z = zOrder(p.x, p.y, minX, minY, invSize);
+        p.prevZ = p.prev;
+        p.nextZ = p.next;
+        p = p.next;
+    } while (p !== start);
+    p.prevZ.nextZ = null;
+    p.prevZ = null;
+    sortLinked(p);
+}
+
+function sortLinked(list) {
+    let numMerges, inSize = 1;
+    do {
+        let p = list, e;
+        list = null;
+        let tail = null;
+        numMerges = 0;
+        while (p) {
+            numMerges++;
+            let q = p, pSize = 0;
+            for (let i = 0; i < inSize; i++) { pSize++; q = q.nextZ; if (!q) break; }
+            let qSize = inSize;
+            while (pSize > 0 || (qSize > 0 && q)) {
+                if (pSize !== 0 && (qSize === 0 || !q || p.z <= q.z)) { e = p; p = p.nextZ; pSize--; }
+                else { e = q; q = q.nextZ; qSize--; }
+                if (tail) tail.nextZ = e;
+                else list = e;
+                e.prevZ = tail;
+                tail = e;
+            }
+            p = q;
+        }
+        tail.nextZ = null;
+        inSize *= 2;
+    } while (numMerges > 1);
+    return list;
+}
+
+function zOrder(x, y, minX, minY, invSize) {
+    x = (x - minX) * invSize | 0;
+    y = (y - minY) * invSize | 0;
+    x = (x | (x << 8)) & 0x00FF00FF; x = (x | (x << 4)) & 0x0F0F0F0F;
+    x = (x | (x << 2)) & 0x33333333; x = (x | (x << 1)) & 0x55555555;
+    y = (y | (y << 8)) & 0x00FF00FF; y = (y | (y << 4)) & 0x0F0F0F0F;
+    y = (y | (y << 2)) & 0x33333333; y = (y | (y << 1)) & 0x55555555;
+    return x | (y << 1);
+}
+
+function getLeftmost(start) {
+    let p = start, leftmost = start;
+    do {
+        if (p.x < leftmost.x || (p.x === leftmost.x && p.y < leftmost.y)) leftmost = p;
+        p = p.next;
+    } while (p !== start);
+    return leftmost;
+}
+
+function pointInTriangle(ax, ay, bx, by, cx, cy, px, py) {
+    return (cx - px) * (ay - py) >= (ax - px) * (cy - py) &&
+           (ax - px) * (by - py) >= (bx - px) * (ay - py) &&
+           (bx - px) * (cy - py) >= (cx - px) * (by - py);
+}
+
+function pointInTriangleExceptFirst(ax, ay, bx, by, cx, cy, px, py) {
+    return !(ax === px && ay === py) && pointInTriangle(ax, ay, bx, by, cx, cy, px, py);
+}
+
+function isValidDiagonal(a, b) {
+    return a.next.i !== b.i && a.prev.i !== b.i && !intersectsPolygon(a, b) &&
+           (locallyInside(a, b) && locallyInside(b, a) && middleInside(a, b) &&
+            (area(a.prev, a, b.prev) || area(a, b.prev, b)) ||
+            equals(a, b) && area(a.prev, a, a.next) > 0 && area(b.prev, b, b.next) > 0);
+}
+
+function area(p, q, r) {
+    return (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+}
+
+function equals(p1, p2) { return p1.x === p2.x && p1.y === p2.y; }
+
+function intersects(p1, q1, p2, q2) {
+    const o1 = sign(area(p1, q1, p2)), o2 = sign(area(p1, q1, q2)),
+          o3 = sign(area(p2, q2, p1)), o4 = sign(area(p2, q2, q1));
+    if (o1 !== o2 && o3 !== o4) return true;
+    if (o1 === 0 && onSegment(p1, p2, q1)) return true;
+    if (o2 === 0 && onSegment(p1, q2, q1)) return true;
+    if (o3 === 0 && onSegment(p2, p1, q2)) return true;
+    if (o4 === 0 && onSegment(p2, q1, q2)) return true;
+    return false;
+}
+
+function onSegment(p, q, r) {
+    return q.x <= Math.max(p.x, r.x) && q.x >= Math.min(p.x, r.x) &&
+           q.y <= Math.max(p.y, r.y) && q.y >= Math.min(p.y, r.y);
+}
+
+function sign(num) { return num > 0 ? 1 : num < 0 ? -1 : 0; }
+
+function intersectsPolygon(a, b) {
+    let p = a;
+    do {
+        if (p.i !== a.i && p.next.i !== a.i && p.i !== b.i && p.next.i !== b.i &&
+            intersects(p, p.next, a, b)) return true;
+        p = p.next;
+    } while (p !== a);
+    return false;
+}
+
+function locallyInside(a, b) {
+    return area(a.prev, a, a.next) < 0 ?
+        area(a, b, a.next) >= 0 && area(a, a.prev, b) >= 0 :
+        area(a, b, a.prev) < 0 || area(a, a.next, b) < 0;
+}
+
+function middleInside(a, b) {
+    let p = a, inside = false;
+    const px = (a.x + b.x) / 2, py = (a.y + b.y) / 2;
+    do {
+        if (((p.y > py) !== (p.next.y > py)) && p.next.y !== p.y &&
+            (px < (p.next.x - p.x) * (py - p.y) / (p.next.y - p.y) + p.x))
+            inside = !inside;
+        p = p.next;
+    } while (p !== a);
+    return inside;
+}
+
+function splitPolygon(a, b) {
+    const a2 = createNode(a.i, a.x, a.y), b2 = createNode(b.i, b.x, b.y),
+          an = a.next, bp = b.prev;
+    a.next = b; b.prev = a;
+    a2.next = an; an.prev = a2;
+    b2.next = a2; a2.prev = b2;
+    bp.next = b2; b2.prev = bp;
+    return b2;
+}
+
+function insertNode(i, x, y, last) {
+    const p = createNode(i, x, y);
+    if (!last) { p.prev = p; p.next = p; }
+    else {
+        p.next = last.next; p.prev = last;
+        last.next.prev = p; last.next = p;
+    }
+    return p;
+}
+
+function removeNode(p) {
+    p.next.prev = p.prev; p.prev.next = p.next;
+    if (p.prevZ) p.prevZ.nextZ = p.nextZ;
+    if (p.nextZ) p.nextZ.prevZ = p.prevZ;
+}
+
+function createNode(i, x, y) {
+    return { i, x, y, prev: null, next: null, z: 0, prevZ: null, nextZ: null, steiner: false };
+}
+
+function signedArea(data, start, end, dim) {
+    let sum = 0;
+    for (let i = start, j = end - dim; i < end; i += dim) {
+        sum += (data[j] - data[i]) * (data[i + 1] + data[j + 1]);
+        j = i;
+    }
+    return sum;
+}
+// ─── End earcut.js ────────────────────────────────────────────────────────────
+
+
+const $ = id => document.getElementById(id);
+let svgText='', svgFileName='model', usdzBlob=null;
+
+function log(msg,type=''){
+  const box=$('logBox'); box.style.display='block';
+  const line=document.createElement('span');
+  line.className='log-line'+(type?' '+type:'');
+  line.textContent='› '+msg; box.appendChild(line);
+  box.scrollTop=box.scrollHeight;
+}
+
+// ─── File handling ─────────────────────────────────────────────────────────
+const dropZone=$('dropZone');
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover')});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f)handleFile(f)});
+$('fileInput').addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0])});
+
+function handleFile(file){
+  if(!file.name.endsWith('.svg')&&file.type!=='image/svg+xml'){alert('Please upload an SVG file.');return}
+  svgFileName=file.name.replace(/\.svg$/i,'');
+  const reader=new FileReader();
+  reader.onload=ev=>{svgText=ev.target.result;showPreview(svgText,file)};
+  reader.readAsText(file);
+}
+
+function showPreview(text,file){
+  $('previewBox').innerHTML=text;
+  const svgEl=$('previewBox').querySelector('svg');
+  if(svgEl){svgEl.style.maxWidth='100%';svgEl.style.maxHeight='100%';svgEl.removeAttribute('width');svgEl.removeAttribute('height')}
+  $('fileName').textContent=file.name;
+  const parser=new DOMParser();
+  const doc=parser.parseFromString(text,'image/svg+xml');
+  const root=doc.querySelector('svg');
+  const vb=root?.getAttribute('viewBox');
+  const w=root?.getAttribute('width')||(vb?vb.split(/\s+/)[2]:'?');
+  const h=root?.getAttribute('height')||(vb?vb.split(/\s+/)[3]:'?');
+  const shapes=doc.querySelectorAll('path,rect,circle,ellipse,polygon,polyline,line');
+  $('fileMeta').innerHTML=`size: ${(file.size/1024).toFixed(1)} KB<br>dimensions: ${w} × ${h}<br>shapes: ${shapes.length}`;
+  const colors=extractColors(doc);
+  const chips=$('colorChips'); chips.innerHTML='';
+  [...colors].slice(0,12).forEach(c=>{
+    const chip=document.createElement('div'); chip.className='chip';
+    chip.innerHTML=`<div class="chip-dot" style="background:${c}"></div>${c}`;
+    chips.appendChild(chip);
+  });
+  $('previewRow').style.display='flex';
+  $('convertBtn').style.display='block';
+  $('downloadBtn').style.display='none';
+  $('logBox').innerHTML=''; $('logBox').style.display='none';
+  usdzBlob=null;
+}
+
+// ─── Color utilities ────────────────────────────────────────────────────────
+function extractColors(doc){
+  const colors=new Set();
+  doc.querySelectorAll('*').forEach(el=>{
+    ['fill','stroke'].forEach(attr=>{const v=el.getAttribute(attr);if(v){const n=normColor(v);if(n)colors.add(n)}});
+    const s=el.getAttribute('style')||'';
+    const fm=s.match(/fill\s*:\s*([^;]+)/i); if(fm){const n=normColor(fm[1].trim());if(n)colors.add(n)}
+    const sm=s.match(/stroke\s*:\s*([^;]+)/i); if(sm){const n=normColor(sm[1].trim());if(n)colors.add(n)}
+  });
+  return colors;
+}
+
+const NAMED={black:'#000000',white:'#ffffff',red:'#ff0000',green:'#008000',blue:'#0000ff',
+  yellow:'#ffff00',orange:'#ffa500',purple:'#800080',cyan:'#00ffff',magenta:'#ff00ff',
+  gray:'#808080',grey:'#808080',pink:'#ffc0cb',brown:'#a52a2a',lime:'#00ff00',navy:'#000080',
+  teal:'#008080',silver:'#c0c0c0',gold:'#ffd700',transparent:null,none:null};
+
+function normColor(v){
+  if(!v||v==='none'||v==='transparent')return null;
+  v=v.trim().toLowerCase();
+  if(NAMED[v]!==undefined)return NAMED[v];
+  if(v.startsWith('#')){if(v.length===4)return'#'+v[1]+v[1]+v[2]+v[2]+v[3]+v[3];return v.length===7?v:null}
+  const rgb=v.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/);
+  if(rgb)return'#'+[+rgb[1],+rgb[2],+rgb[3]].map(x=>x.toString(16).padStart(2,'0')).join('');
+  return null;
+}
+
+function hexToLinear(hex){
+  const r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+  const lin=c=>c<=0.04045?c/12.92:Math.pow((c+0.055)/1.055,2.4);
+  return[lin(r),lin(g),lin(b)];
+}
+
+// ─── Transform helpers ──────────────────────────────────────────────────────
+function parseTx(el){
+  const t=el.getAttribute('transform')||'';
+  if(!t)return[1,0,0,1,0,0];
+  const m=t.match(/matrix\(([^)]+)\)/); if(m)return m[1].split(/[\s,]+/).map(Number);
+  const tr=t.match(/translate\(([^)]+)\)/); if(tr){const p=tr[1].split(/[\s,]+/).map(Number);return[1,0,0,1,p[0]||0,p[1]||0]}
+  const sc=t.match(/scale\(([^)]+)\)/); if(sc){const p=sc[1].split(/[\s,]+/).map(Number);return[p[0],0,0,p[1]||p[0],0,0]}
+  return[1,0,0,1,0,0];
+}
+function mulMx(a,b){return[a[0]*b[0]+a[2]*b[1],a[1]*b[0]+a[3]*b[1],a[0]*b[2]+a[2]*b[3],a[1]*b[2]+a[3]*b[3],a[0]*b[4]+a[2]*b[5]+a[4],a[1]*b[4]+a[3]*b[5]+a[5]]}
+function applyMx(mx,x,y){return[mx[0]*x+mx[2]*y+mx[4],mx[1]*x+mx[3]*y+mx[5]]}
+
+function getWorldMx(el,rootEl){
+  let mx=[1,0,0,1,0,0]; const chain=[];
+  let node=el;
+  while(node&&node!==rootEl){chain.unshift(node);node=node.parentElement}
+  for(const n of chain)mx=mulMx(mx,parseTx(n));
+  return mx;
+}
+
+function getColor(el,attr){
+  const style=el.getAttribute('style')||'';
+  const re=new RegExp(attr+'\\s*:\\s*([^;]+)','i');
+  const m=style.match(re); if(m)return normColor(m[1].trim());
+  const v=el.getAttribute(attr); if(v)return normColor(v);
+  if(el.parentElement&&el.parentElement.tagName!=='svg')return getColor(el.parentElement,attr);
+  return attr==='fill'?'#000000':null;
+}
+
+// ─── Bezier subdivision ─────────────────────────────────────────────────────
+const BEZIER_STEPS=16;
+
+function cubicPts(x0,y0,x1,y1,x2,y2,x3,y3){
+  const pts=[];
+  for(let i=1;i<=BEZIER_STEPS;i++){
+    const t=i/BEZIER_STEPS,mt=1-t;
+    pts.push([mt**3*x0+3*mt**2*t*x1+3*mt*t**2*x2+t**3*x3,
+              mt**3*y0+3*mt**2*t*y1+3*mt*t**2*y2+t**3*y3]);
+  }
+  return pts;
+}
+function quadPts(x0,y0,x1,y1,x2,y2){
+  const pts=[];
+  for(let i=1;i<=BEZIER_STEPS;i++){
+    const t=i/BEZIER_STEPS,mt=1-t;
+    pts.push([mt**2*x0+2*mt*t*x1+t**2*x2, mt**2*y0+2*mt*t*y1+t**2*y2]);
+  }
+  return pts;
+}
+
+// ─── Path parser → array of closed subpath point arrays ─────────────────────
+// Each Z command closes the current subpath and starts a new one.
+// This correctly handles compound paths (e.g. letters with holes like A, B, D, O, P, Q, R).
+function parsePathSubpaths(d){
+  const subpaths=[];
+  let pts=[];
+  const tokens=d.match(/[MmLlHhVvCcSsQqTtAaZz]|[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?/g)||[];
+  let i=0,cx=0,cy=0,startX=0,startY=0,cmd='M';
+  let prevCPX=null,prevCPY=null;
+
+  function num(){return parseFloat(tokens[i++])}
+  function add(x,y){pts.push([x,y])}
+  function addAll(list){list.forEach(([x,y])=>add(x,y))}
+
+  while(i<tokens.length){
+    const t=tokens[i];
+    if(/[A-Za-z]/.test(t)){
+      cmd=t; i++;
+      if(!'SsTt'.includes(t)){prevCPX=null;prevCPY=null}
+      continue;
+    }
+    switch(cmd){
+      case 'M':{cx=num();cy=num();startX=cx;startY=cy;add(cx,cy);cmd='L';break}
+      case 'm':{cx+=num();cy+=num();startX=cx;startY=cy;add(cx,cy);cmd='l';break}
+      case 'L':{cx=num();cy=num();add(cx,cy);break}
+      case 'l':{cx+=num();cy+=num();add(cx,cy);break}
+      case 'H':{cx=num();add(cx,cy);break}
+      case 'h':{cx+=num();add(cx,cy);break}
+      case 'V':{cy=num();add(cx,cy);break}
+      case 'v':{cy+=num();add(cx,cy);break}
+      case 'C':{const x1=num(),y1=num(),x2=num(),y2=num(),x3=num(),y3=num();addAll(cubicPts(cx,cy,x1,y1,x2,y2,x3,y3));prevCPX=x2;prevCPY=y2;cx=x3;cy=y3;break}
+      case 'c':{const x1=cx+num(),y1=cy+num(),x2=cx+num(),y2=cy+num(),x3=cx+num(),y3=cy+num();addAll(cubicPts(cx,cy,x1,y1,x2,y2,x3,y3));prevCPX=x2;prevCPY=y2;cx=x3;cy=y3;break}
+      case 'S':{const x1=prevCPX!=null?2*cx-prevCPX:cx,y1=prevCPY!=null?2*cy-prevCPY:cy,x2=num(),y2=num(),x3=num(),y3=num();addAll(cubicPts(cx,cy,x1,y1,x2,y2,x3,y3));prevCPX=x2;prevCPY=y2;cx=x3;cy=y3;break}
+      case 's':{const x1=prevCPX!=null?2*cx-prevCPX:cx,y1=prevCPY!=null?2*cy-prevCPY:cy,x2=cx+num(),y2=cy+num(),x3=cx+num(),y3=cy+num();addAll(cubicPts(cx,cy,x1,y1,x2,y2,x3,y3));prevCPX=x2;prevCPY=y2;cx=x3;cy=y3;break}
+      case 'Q':{const x1=num(),y1=num(),x2=num(),y2=num();addAll(quadPts(cx,cy,x1,y1,x2,y2));prevCPX=x1;prevCPY=y1;cx=x2;cy=y2;break}
+      case 'q':{const x1=cx+num(),y1=cy+num(),x2=cx+num(),y2=cy+num();addAll(quadPts(cx,cy,x1,y1,x2,y2));prevCPX=x1;prevCPY=y1;cx=x2;cy=y2;break}
+      case 'T':{const x1=prevCPX!=null?2*cx-prevCPX:cx,y1=prevCPY!=null?2*cy-prevCPY:cy,x2=num(),y2=num();addAll(quadPts(cx,cy,x1,y1,x2,y2));prevCPX=x1;prevCPY=y1;cx=x2;cy=y2;break}
+      case 't':{const x1=prevCPX!=null?2*cx-prevCPX:cx,y1=prevCPY!=null?2*cy-prevCPY:cy,x2=cx+num(),y2=cy+num();addAll(quadPts(cx,cy,x1,y1,x2,y2));prevCPX=x1;prevCPY=y1;cx=x2;cy=y2;break}
+      case 'A':case 'a':{const rel=(cmd==='a');num();num();num();num();num();const ex=rel?cx+num():num(),ey=rel?cy+num():num();add(ex,ey);cx=ex;cy=ey;break}
+      case 'Z':case 'z':{
+        // Close subpath: add closing point, save, reset for next subpath
+        add(startX,startY);
+        if(pts.length>=3)subpaths.push(pts);
+        pts=[];
+        cx=startX; cy=startY;
+        i++; break;
+      }
+      default: i++;
+    }
+  }
+  if(pts.length>=3)subpaths.push(pts); // unclosed path
+  return subpaths;
+}
+
+// ─── Polygon signed area (shoelace) ────────────────────────────────────────
+function polyArea2D(pts){
+  let s=0;
+  for(let i=0,n=pts.length;i<n;i++){const j=(i+1)%n;s+=pts[i][0]*pts[j][1]-pts[j][0]*pts[i][1]}
+  return s/2;
+}
+
+// ─── Triangulate subpaths using earcut (handles holes) ──────────────────────
+function triangulateSubpaths(subpaths){
+  if(!subpaths||subpaths.length===0)return{vertices:[],triangles:[]};
+
+  // Deduplicate consecutive identical points in each subpath
+  const clean = subpaths.map(sp=>{
+    const out=[];
+    for(let i=0;i<sp.length;i++){
+      const [x,y]=sp[i], prev=out[out.length-1];
+      if(!prev||Math.abs(prev[0]-x)>1e-10||Math.abs(prev[1]-y)>1e-10) out.push([x,y]);
+    }
+    return out;
+  }).filter(sp=>sp.length>=3);
+
+  if(clean.length===0)return{vertices:[],triangles:[]};
+
+  if(clean.length===1){
+    const pts=clean[0];
+    const flat=pts.flatMap(p=>p);
+    const idxs=earcut(flat,[],2);
+    if(idxs.length===0)return{vertices:[],triangles:[]};
+    return{vertices:pts, triangles:chunk3(idxs)};
+  }
+
+  // Multiple subpaths: largest absolute area = outer contour, rest = holes.
+  // earcut wants: outer (CCW) first, holes (CW) after, with holeIndices = [startIdx, ...]
+  const withArea=clean.map(sp=>({sp,area:polyArea2D(sp)}));
+  withArea.sort((a,b)=>Math.abs(b.area)-Math.abs(a.area));
+
+  const outer=withArea[0].sp;
+  const holes=withArea.slice(1).map(h=>h.sp);
+
+  // Build flat array: outer pts + hole pts concatenated
+  const allPts=[...outer,...holes.flat()];
+  const flat=allPts.flatMap(p=>p);
+
+  // hole start indices (in vertex count, not flat array positions — earcut handles dim internally)
+  const holeStarts=[];
+  let off=outer.length;
+  for(const h of holes){holeStarts.push(off);off+=h.length}
+
+  const idxs=earcut(flat,holeStarts,2);
+  if(idxs.length===0)return{vertices:[],triangles:[]};
+  return{vertices:allPts, triangles:chunk3(idxs)};
+}
+
+function chunk3(arr){
+  const out=[];
+  for(let i=0;i<arr.length;i+=3)out.push([arr[i],arr[i+1],arr[i+2]]);
+  return out;
+}
+
+// ─── SVG shape extraction ───────────────────────────────────────────────────
+function parseSVGShapes(svgText){
+  const parser=new DOMParser();
+  const doc=parser.parseFromString(svgText,'image/svg+xml');
+  const root=doc.querySelector('svg');
+  if(!root)return[];
+
+  let vbX=0,vbY=0,vbW=100,vbH=100;
+  const vb=root.getAttribute('viewBox');
+  if(vb){const p=vb.trim().split(/[\s,]+/).map(Number);[vbX,vbY,vbW,vbH]=p}
+  else{vbW=parseFloat(root.getAttribute('width'))||100;vbH=parseFloat(root.getAttribute('height'))||100}
+  const scale=Math.max(vbW,vbH);
+
+  const shapes=[];
+  let zOrder=0;
+
+  function tx(worldMx,x,y){
+    const[px,py]=applyMx(worldMx,x,y);
+    return[(px-vbX-vbW/2)/scale*2, -(py-vbY-vbH/2)/scale*2];
+  }
+
+  function processEl(el){
+    const tag=el.tagName.toLowerCase();
+    const mx=getWorldMx(el,root.parentElement);
+    const fill=getColor(el,'fill');
+    const stroke=getColor(el,'stroke');
+    const color=fill||stroke||'#888888';
+    let subpaths=null;
+
+    if(tag==='rect'){
+      const x=parseFloat(el.getAttribute('x')||0),y=parseFloat(el.getAttribute('y')||0);
+      const w=parseFloat(el.getAttribute('width')||0),h=parseFloat(el.getAttribute('height')||0);
+      if(w>0&&h>0)subpaths=[[tx(mx,x,y),tx(mx,x+w,y),tx(mx,x+w,y+h),tx(mx,x,y+h)]];
+    }else if(tag==='circle'){
+      const cx=parseFloat(el.getAttribute('cx')||0),cy=parseFloat(el.getAttribute('cy')||0),r=parseFloat(el.getAttribute('r')||0);
+      if(r>0)subpaths=[Array.from({length:32},(_,i)=>{const a=2*Math.PI*i/32;return tx(mx,cx+r*Math.cos(a),cy+r*Math.sin(a))})];
+    }else if(tag==='ellipse'){
+      const cx=parseFloat(el.getAttribute('cx')||0),cy=parseFloat(el.getAttribute('cy')||0);
+      const rx=parseFloat(el.getAttribute('rx')||0),ry=parseFloat(el.getAttribute('ry')||0);
+      if(rx>0&&ry>0)subpaths=[Array.from({length:32},(_,i)=>{const a=2*Math.PI*i/32;return tx(mx,cx+rx*Math.cos(a),cy+ry*Math.sin(a))})];
+    }else if(tag==='polygon'||tag==='polyline'){
+      const nums=(el.getAttribute('points')||'').trim().split(/[\s,]+/).map(Number).filter(n=>!isNaN(n));
+      const pts=[];for(let i=0;i+1<nums.length;i+=2)pts.push(tx(mx,nums[i],nums[i+1]));
+      if(pts.length>=3)subpaths=[pts];
+    }else if(tag==='path'){
+      // Parse in SVG coordinate space first, then transform
+      const rawSubs=parsePathSubpaths(el.getAttribute('d')||'');
+      if(rawSubs.length>0){
+        subpaths=rawSubs.map(sp=>sp.map(([x,y])=>tx(mx,x,y)));
+      }
+    }
+
+    if(subpaths&&subpaths.length>0){
+      shapes.push({subpaths,color,zIndex:zOrder++});
+    }
+
+    if(['g','svg','symbol','a'].includes(tag)){
+      for(const child of el.children)processEl(child);
+    }
+  }
+
+  for(const child of root.children)processEl(child);
+  return shapes;
+}
+
+// ─── USDA generation ────────────────────────────────────────────────────────
+function shapesToUSDA(shapes){
+  const materialDefs=[];
+  const meshDefs=[];
+  const colorMap=new Map();
+  const Z_STEP=0.0002;  // 0.2mm per layer — prevents z-fighting between stacked shapes
+  const EXTRUDE=0.003;  // 3mm extrusion depth
+
+  let meshIdx=0;
+
+  shapes.forEach(shape=>{
+    const{subpaths,color,zIndex}=shape;
+    const zFront=zIndex*Z_STEP;
+    const zBack=zFront-EXTRUDE;
+
+    const hex=color||'#888888';
+    let matName=colorMap.get(hex);
+    if(!matName){
+      matName='mat_'+hex.slice(1);
+      const shaderName=matName+'_shader';
+      colorMap.set(hex,matName);
+      const[r,g,b]=hexToLinear(hex);
+      materialDefs.push(`
+        def Material "${matName}"
+        {
+            token outputs:surface.connect = </Root/Materials/${matName}/${shaderName}.outputs:surface>
+            def Shader "${shaderName}"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (${r.toFixed(6)}, ${g.toFixed(6)}, ${b.toFixed(6)})
+                float inputs:roughness = 0.35
+                float inputs:metallic = 0.0
+                float inputs:opacity = 1.0
+                token outputs:surface
+            }
+        }`);
+    }
+
+    // Triangulate: earcut handles non-convex polygons AND holes in compound paths
+    const{vertices,triangles}=triangulateSubpaths(subpaths);
+    if(vertices.length<3||triangles.length===0)return;
+
+    const n=vertices.length;
+    const verts3D=[];
+    vertices.forEach(([x,y])=>verts3D.push([x,y,zFront]));  // front face
+    vertices.forEach(([x,y])=>verts3D.push([x,y,zBack]));    // back face
+
+    let fvc=[],fvi=[];
+    triangles.forEach(([a,b,c])=>{fvc.push(3);fvi.push(a,b,c)});           // front
+    triangles.forEach(([a,b,c])=>{fvc.push(3);fvi.push(n+c,n+b,n+a)});     // back (reversed)
+    for(let i=0;i<n;i++){                                                    // sides
+      const next=(i+1)%n;
+      fvc.push(4); fvi.push(i,next,n+next,n+i);
+    }
+
+    const pointsStr=verts3D.map(([x,y,z])=>`(${x.toFixed(6)}, ${y.toFixed(6)}, ${z.toFixed(6)})`).join(', ');
+
+    meshDefs.push(`
+    def Mesh "shape_${meshIdx++}" (
+        prepend apiSchemas = ["MaterialBindingAPI"]
+    )
+    {
+        int[] faceVertexCounts = [${fvc.join(', ')}]
+        int[] faceVertexIndices = [${fvi.join(', ')}]
+        point3f[] points = [${pointsStr}]
+        uniform token subdivisionScheme = "none"
+        rel material:binding = </Root/Materials/${matName}>
+    }`);
+  });
+
+  return`#usda 1.0
+(
+    defaultPrim = "Root"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "Root"
+{
+    def Scope "Materials"
+    {${materialDefs.join('\n')}
+    }
+${meshDefs.join('\n')}
+}
+`;
+}
+
+// ─── USDZ packing — hand-rolled ZIP with 64-byte alignment ──────────────────
+function crc32(data){
+  let t=crc32._t;
+  if(!t){t=crc32._t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[i]=c}}
+  let crc=0xFFFFFFFF;
+  for(let i=0;i<data.length;i++)crc=t[(crc^data[i])&0xFF]^(crc>>>8);
+  return(crc^0xFFFFFFFF)>>>0;
+}
+
+async function packUSDZ(usda,name){
+  const enc=new TextEncoder();
+  const fileData=enc.encode(usda);
+  const fileName=enc.encode(name+'.usda');
+  // Pad extra field so data starts at a 64-byte-aligned offset (USDZ spec requirement)
+  const headerBase=30+fileName.length;
+  const extraLen=(64-(headerBase%64))%64;
+  const extra=new Uint8Array(extraLen);
+  const crc=crc32(fileData),fsize=fileData.length;
+  const now=new Date();
+  const dosTime=(now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1);
+  const dosDate=((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate();
+
+  const lh=new DataView(new ArrayBuffer(30));
+  lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0,true);
+  lh.setUint16(8,0,true);lh.setUint16(10,dosTime,true);lh.setUint16(12,dosDate,true);
+  lh.setUint32(14,crc,true);lh.setUint32(18,fsize,true);lh.setUint32(22,fsize,true);
+  lh.setUint16(26,fileName.length,true);lh.setUint16(28,extraLen,true);
+
+  const localOffset=30+fileName.length+extraLen+fsize;
+
+  const cd=new DataView(new ArrayBuffer(46));
+  cd.setUint32(0,0x02014b50,true);cd.setUint16(4,20,true);cd.setUint16(6,20,true);
+  cd.setUint16(8,0,true);cd.setUint16(10,0,true);cd.setUint16(12,dosTime,true);cd.setUint16(14,dosDate,true);
+  cd.setUint32(16,crc,true);cd.setUint32(20,fsize,true);cd.setUint32(24,fsize,true);
+  cd.setUint16(28,fileName.length,true);cd.setUint16(30,0,true);cd.setUint16(32,0,true);
+  cd.setUint16(34,0,true);cd.setUint16(36,0,true);cd.setUint32(38,0,true);cd.setUint32(42,0,true);
+
+  const eocd=new DataView(new ArrayBuffer(22));
+  eocd.setUint32(0,0x06054b50,true);eocd.setUint16(4,0,true);eocd.setUint16(6,0,true);
+  eocd.setUint16(8,1,true);eocd.setUint16(10,1,true);
+  eocd.setUint32(12,46+fileName.length,true);eocd.setUint32(16,localOffset,true);eocd.setUint16(20,0,true);
+
+  const parts=[new Uint8Array(lh.buffer),fileName,extra,fileData,new Uint8Array(cd.buffer),fileName,new Uint8Array(eocd.buffer)];
+  const total=parts.reduce((s,p)=>s+p.length,0);
+  const out=new Uint8Array(total);let off=0;
+  for(const p of parts){out.set(p,off);off+=p.length}
+  return new Blob([out],{type:'model/vnd.usdz+zip'});
+}
+
+// ─── Convert ────────────────────────────────────────────────────────────────
+$('convertBtn').addEventListener('click',async()=>{
+  $('convertBtn').disabled=true;
+  $('logBox').innerHTML='';$('logBox').style.display='block';
+  $('downloadBtn').style.display='none';usdzBlob=null;
+
+  try{
+    log('Parsing SVG shapes...','info');
+    const shapes=parseSVGShapes(svgText);
+    const totalSubs=shapes.reduce((s,sh)=>s+sh.subpaths.length,0);
+    log(`Found ${shapes.length} shape(s), ${totalSubs} subpath(s)`,'ok');
+    if(shapes.length===0){log('No renderable shapes found.','err');$('convertBtn').disabled=false;return}
+
+    const compound=shapes.filter(s=>s.subpaths.length>1);
+    if(compound.length>0)log(`Compound paths with holes: ${compound.length}`,'info');
+
+    log('Triangulating with earcut...','info');
+    const usda=shapesToUSDA(shapes);
+    log(`USDA: ${(usda.length/1024).toFixed(1)} KB`,'ok');
+
+    log('Packing USDZ (64-byte aligned)...','info');
+    usdzBlob=await packUSDZ(usda,svgFileName);
+    log(`USDZ ready: ${(usdzBlob.size/1024).toFixed(1)} KB`,'ok');
+    log('Done! ✓','ok');
+    $('downloadBtn').style.display='block';
+  }catch(err){
+    log('Error: '+err.message,'err');console.error(err);
+  }
+  $('convertBtn').disabled=false;
+});
+
+$('downloadBtn').addEventListener('click',()=>{
+  if(!usdzBlob)return;
+  const url=URL.createObjectURL(usdzBlob);
+  const a=document.createElement('a');a.href=url;a.download=svgFileName+'.usdz';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+</script>
+</body>
+</html>
