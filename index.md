@@ -85,7 +85,7 @@ Tools I've vibe coded (i.e., through iterative prompting) using Claude and Codex
   <a class="nl-card" href="tools/contacts-graph/index.html">
     <div class="ico">🕸️</div>
     <strong>Contact Relationship Map</strong>
-    <small>Drop in a .vcf export, see and edit who's related to whom, export it back. This is getting <i>pretty good<i>.</small>
+    <small>Drop in a .vcf export, see and edit who's related to whom, export it back. This is getting <i>pretty good</i>.</small>
   </a>
   <a class="nl-card" href="tools/sorting-visualizer.html">
     <div class="ico">📊</div>
