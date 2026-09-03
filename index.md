@@ -21,9 +21,16 @@ layout: default
   .nl-card .ico { font-size: 1.6rem; line-height: 1; margin-bottom: 8px; }
   .nl-card strong { display: block; color: #0366d6; margin-bottom: 4px; }
   .nl-card small { color: #586069; line-height: 1.4; display: block; }
+  .nl-card-static:hover { transform: none; box-shadow: none; border-color: #e1e4e8; }
+  .nl-card-links { margin-top: 8px; }
+  .nl-card-links a { color: #0366d6; font-weight: 600; }
   .nl-note { color: #6a737d; font-size: .9rem; margin-top: 10px; }
   .nl-foot { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e1e4e8; color: #6a737d; font-size: .9rem; }
   @media (max-width: 560px) { .nl-hero { flex-direction: column; align-items: flex-start; } }
+  .nl-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+  .nl-links a { display: inline-block; padding: 5px 12px; border: 1px solid #d1d5da; border-radius: 999px; font-size: .9rem; color: #24292e; text-decoration: none !important; background: #fafbfc; }
+  .nl-links a:hover { border-color: #0366d6; color: #0366d6; }
+  .nl-links a span { color: #6a737d; margin-right: 4px; }
 </style>
 
 <div class="nl-hero">
@@ -54,6 +61,20 @@ Volunteer with [The Norfolk Street Choir](https://thenorfolkstreetchoir.org) and
 Twenty-five-plus years in cybersecurity compliance and risk assessment. Architect of MITRE's [Adaptive Cybersecurity Testing (ACT)](https://act.mitre.org) risk-based assessment framework.
 
 Before that: Common Criteria and FIPS 140 certifications, security controls assessments, and a lot of policy writing. The full story, with all the jargon, is on the [résumé](resume).
+
+## Find me elsewhere
+
+</div>
+
+<div class="nl-links">
+  <a href="https://github.com/unfortuNateLee"><span>GitHub</span>unfortuNateLee</a>
+  <a href="https://steamcommunity.com/id/unfortuNateLee"><span>Steam</span>unfortuNateLee</a>
+  <a href="https://www.gog.com/u/edifyyo"><span>GOG</span>edifyyo</a>
+  <a href="https://www.instagram.com/edifyyo"><span>Instagram</span>edifyyo</a>
+  <a href="https://www.facebook.com/Nathan.Lee"><span>Facebook</span>Nathan.Lee</a>
+</div>
+
+<div class="nl-section" markdown="1">
 
 ## Experiments in vibe coding
 
@@ -92,9 +113,14 @@ Tools I've vibe coded (i.e., through iterative prompting) using Claude and Codex
     <strong>Sorting Visualizer</strong>
     <small>Watch the classic sorting algorithms race each other. Fun, could be better.</small>
   </a>
-</div>
+  <div class="nl-card nl-card-static">
+    <div class="ico">📧</div>
+    <strong>Mimestream Backup</strong>
+    <small>Not a web page, but also here: shell scripts that back up and restore a <a href="https://www.mimestream.com">Mimestream</a> configuration without the message cache. Useful for moving a Mimestream config to a new Mac.</small>
+    <small class="nl-card-links"><a href="tools/mimestream-backup/mimestream-backup.sh" download>mimestream-backup.sh</a> · <a href="tools/mimestream-backup/mimestream-restore.sh" download>mimestream-restore.sh</a></small>
+  </div>
 
-<p class="nl-note">Not a web page, but also here: <a href="tools/mimestream-backup/mimestream-backup.sh">mimestream-backup.sh</a> and <a href="tools/mimestream-backup/mimestream-restore.sh">mimestream-restore.sh</a>, shell scripts that back up and restore a Mimestream configuration without the resyncable message cache. Useful for moving a Mimestream config to a new Mac.</p>
+</div>
 
 <div class="nl-foot">
   Built with GitHub Pages, a little Markdown, and a lot of Claude. Reach me at nathan (over-yonder-at) teamlee.fun.
