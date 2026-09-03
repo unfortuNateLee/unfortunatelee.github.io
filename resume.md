@@ -8,7 +8,7 @@ Hampton Roads, VA · +1-530-628-3533 · nathan (over-yonder-at) teamlee.fun
 
 Principal cybersecurity engineer with 25+ years in federal security assessment, with expertise in Common Criteria (design) and FIPS 140 (crypto) certification, Security Controls Assessment leadership and execution, Risk Management Framework (RMF) and risk assessment. Architect of MITRE's Adaptive Cybersecurity Testing (ACT, [act.mitre.org](https://act.mitre.org)) risk-based assessment framework that replaced the legacy compliance assessment program for 200+ FISMA systems at CMS and is deployed with U.S. combatant commands (COCOMs) and their Foreign Military Sales (FMS) partners in Taiwan, the United Arab Emirates (UAE), and Morocco. Lead group responsible for MITRE's Security Automation Framework (SAF) [saf.mitre.org](https://saf.mitre.org) and for Agentic ACT, an LLM-based tool that automates much of the ACT risk-assessment process.
 
-## Core Competencies (Jargon)
+## Core Competencies (and jargon)
 
 Risk-based security assessment (ACT) · NIST RMF and DoD RMF · NIST SP 800-53 · CMS ARS / CMSR · Security Controls Assessment (SCA) and A&A · Vulnerability assessment and penetration testing · Security automation (MITRE SAF, LLM-assisted assessment) · Common Criteria (CC) v2/v3 · FIPS 140-2/140-3 · Cybersecurity policy development · Foreign Military Sales (FMS) engagements · Engineering management and mentoring · Sponsor relationship and expectation management
 
@@ -85,7 +85,3 @@ Risk-based security assessment (ACT) · NIST RMF and DoD RMF · NIST SP 800-53 �
 ## Certifications
 
 Certified Information Systems Security Professional (CISSP), ID# 512193
-
-## Clearances
-
-Available upon request.
