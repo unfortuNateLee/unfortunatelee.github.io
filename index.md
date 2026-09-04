@@ -27,8 +27,8 @@ layout: default
   .nl-note { color: #6a737d; font-size: .9rem; margin-top: 10px; }
   .nl-foot { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e1e4e8; color: #6a737d; font-size: .9rem; }
   @media (max-width: 560px) { .nl-hero { flex-direction: column; align-items: flex-start; } }
-  .nl-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: -12px 0 8px; }
-  .nl-links-label { color: #6a737d; font-size: .9rem; margin-right: 4px; }
+  .nl-links-head { margin: -8px 0 10px; font-size: 1.05rem; font-weight: 600; color: #24292e; }
+  .nl-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 8px; }
   .nl-links a { display: inline-block; padding: 5px 12px; border: 1px solid #d1d5da; border-radius: 999px; font-size: .9rem; color: #24292e; text-decoration: none !important; background: #fafbfc; }
   .nl-links a:hover { border-color: #0366d6; color: #0366d6; }
   .nl-links a span { color: #6a737d; margin-right: 4px; }
@@ -39,14 +39,14 @@ layout: default
   <div>
     <h1>Hi, I'm <span>unfortu</span>Nate Lee.</h1>
     <p class="nl-tag">Cybersecurity Nerd · Hampton Roads, VA · CISSP</p>
-    <p>I assess cybersecurity risk for a living, tell dad jokes for free, and explore technology and build small tools in my spare time. My résumé is very informative (and great for insomnia!); the more interesting stuff is on this page.</p>
+    <p>I assess cybersecurity risk for a living, tell dad jokes for free, and explore technology and build small tools in my spare time. My résumé is very informative (and great for insomnia!); the more interesting stuff is on this page. You'll have to hit me up for the dad jokes.</p>
     <a class="nl-cta primary" href="resume">Read my résumé</a>
     <a class="nl-cta secondary" href="/tools/">Browse the tools</a>
   </div>
 </div>
 
+<div class="nl-links-head">Find me elsewhere</div>
 <div class="nl-links">
-  <span class="nl-links-label">Find me elsewhere:</span>
   <a href="https://github.com/unfortuNateLee"><span>GitHub</span>unfortuNateLee</a>
   <a href="https://steamcommunity.com/id/unfortuNateLee"><span>Steam</span>unfortuNateLee</a>
   <a href="https://www.gog.com/u/edifyyo"><span>GOG</span>edifyyo</a>
@@ -74,7 +74,7 @@ Before that: Common Criteria and FIPS 140 certifications, security controls asse
 
 ## Experiments in vibe coding
 
-Tools I've vibe coded (i.e., through iterative prompting) using Claude and Codex. Everything runs entirely in your browser. Nothing you drop in is uploaded anywhere.
+Tools I've vibe coded (*i.e.*, through iterative prompting) using Claude and Codex. Everything runs entirely in your browser. Nothing you drop in is uploaded anywhere.
 
 </div>
 
