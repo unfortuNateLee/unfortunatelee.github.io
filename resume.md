@@ -77,6 +77,7 @@ Risk-based security assessment (ACT) · NIST RMF and DoD RMF · NIST SP 800-53 �
 - Software Engineer/Contractor, Synergy Consulting Services (custom VB/VBA business applications, 2001–2002)
 - Information Solutions intern, Campus Crusade for Christ World HQ (JSP/EJB/Oracle intranet site, 2000)
 - Resident Network Assistant, James Madison University campus LAN (1997–2000).
+- Showroom Manager, P C Gallery in Chesapeake, VA (1994-1998)
 
 ## Education
 
