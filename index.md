@@ -58,19 +58,19 @@ layout: default
 
 ## Who is this guy?
 
-Former fetus with over four decades of experience converting oxygen to carbon dioxide (except for those 53 minutes in 2023...).
+- Former fetus with over four decades of experience converting oxygen to carbon dioxide (except for those 53 minutes in 2023...).
 
-Follower of Jesus Christ. Trying to be a good person and to make this good world an even better place by loving God and loving others. Trying to be a love-your-neighbor Christian, not a culture-war kind.
+- Follower of Jesus Christ. Trying to be a good person and to make this good world an even better place by loving God and loving others. Trying to be a love-your-neighbor Christian, not a culture-war kind.
 
-Husband to one wife (that we know of), father to one son.
+- Husband to one wife (that we know of), father to one son.
 
-Passionate about technology. Player of story-driven video games. Listener of audiobooks. Enjoyer of quality sci-fi and fantasy. Purveyor of dadjokes. Dabbler in 3D printing. Player of board games. Amateur carpenter.
+- Passionate about technology. Player of story-driven video games. Listener of audiobooks. Enjoyer of quality sci-fi and fantasy. Purveyor of dadjokes. Dabbler in 3D printing. Player of board games. Amateur carpenter.
 
-Volunteer with [The Norfolk Street Choir](https://thenorfolkstreetchoir.org) and [Neighborhood](https://thisisneighborhood.com).
+- Volunteer with [The Norfolk Street Choir](https://thenorfolkstreetchoir.org) and [Neighborhood](https://thisisneighborhood.com).
 
-Twenty-five-plus years in cybersecurity compliance and risk assessment. Architect of MITRE's [Adaptive Cybersecurity Testing (ACT)](https://act.mitre.org) risk-based assessment framework.
+- Twenty-five-plus years in cybersecurity compliance and risk assessment. Architect of MITRE's [Adaptive Cybersecurity Testing (ACT)](https://act.mitre.org) risk-based assessment framework.
 
-Before that: Common Criteria and FIPS 140 certifications, security controls assessments, and a lot of policy writing. The full story, with all the jargon, is on the [résumé](resume).
+- Before that: Common Criteria and FIPS 140 certifications, security controls assessments, and a lot of policy writing. The full story, with all the jargon, is on the [résumé](resume).
 
 ## Experiments in vibe coding
 
