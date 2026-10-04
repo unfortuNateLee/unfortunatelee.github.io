@@ -3,14 +3,14 @@
 # settings, license) WITHOUT the resyncable message cache.
 #
 # Usage:  ./mimestream-backup.sh [destination-dir]
-#         (default destination: ~/Desktop)
+#         (default destination: current working folder in terminal)
 #
 # Requires: the terminal app running this script needs Full Disk Access
 # (System Settings → Privacy & Security → Full Disk Access) because macOS
 # protects other apps' sandbox containers.
 set -euo pipefail
 
-DEST_DIR="${1:-$HOME/Desktop}"
+DEST_DIR="${1:-$PWD}"
 APP="/Applications/Mimestream.app"
 CONTAINER="$HOME/Library/Containers/com.mimestream.Mimestream/Data/Library"
 GROUP="$HOME/Library/Group Containers/group.com.mimestream.Mimestream"
